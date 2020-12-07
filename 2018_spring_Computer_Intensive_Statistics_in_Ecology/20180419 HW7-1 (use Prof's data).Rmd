@@ -1,0 +1,220 @@
+---
+title: "Homework 7"
+author: "Yu-Jen Lin"
+output:
+  html_document: default
+  pdf_document: default
+---
+#### b04b01036@ntu.edu.tw
+#### --------------------------------------------------------------------------------------------------------------------------------------------------------
+
+1. Use the “dominant” copepod species data (from HW1). Perform cluster analysis of stations based on percent composition data of the dominant species and tell your story about these copepod data. You can try to run the example analysis using the environmental data from HW3 to familiarize yourself with cluster analysis.
+– Try to determine the effects of different distance measures
+– Try to compare the results between different cluster algorithms
+– Determine final number of clusters and describe differences among them
+
+？？？ HW1  HW3
+
+#### Set working directory
+```{r}
+setwd("~/R")
+```
+
+
+################### Re-do HW1 #########################################################
+```{r}
+# read data
+composition <- read.table("~/R/copepod_composition.txt", header=T)
+density <- read.table("~/R/cop_density.txt", header=F)
+
+# 1 Calculate the copepod density for each species for each cruise-station
+density.t <- t(density) # transpose
+density.each <- density.t*composition*0.01
+for( i in 1:34){
+  density.each[,i] <- density.t[1,i]*composition[,i]*0.01
+}
+
+# 2 For each cruise-station, calculate the species richness (number of species) and Shannon diversity index
+density.each.zero <- density.each>0
+species.number <- apply(density.each.zero, MARGIN=2, FUN = sum)
+species.number.correction <- species.number-1 # species richness (number of species)
+
+density.sum <- sum(density.each)
+density.propotion <- density.each/density.sum
+Shannon <- density.propotion*log(density.propotion)
+Shannon.sum <- apply(Shannon, MARGIN=2, FUN = sum, na.rm=TRUE)
+Shannon.sum.positive <- Shannon.sum*-1 # Shannon diversity index
+
+# 3 Find dominant species (species >=2% of total composition in any cruise-station) and calculate the average density for the spring, summer, and winter cruise for each dominant species.
+density.propotion.sum <- apply(density.propotion, MARGIN=1, FUN = sum) # sum of each species
+density.each.propotion.sum.add <- cbind(density.each,density.propotion.sum) # add it to the original table
+
+dominant <- subset(density.each.propotion.sum.add, density.propotion.sum >= 0.02, select=c(1:35)) # collect the rows that are dominant species
+
+springsum <- apply(dominant, MARGIN=1, FUN = sum, select=c(1:10) )
+springavg <- springsum/10
+summersum <- apply(dominant, MARGIN=1, FUN = sum, select=c(11:25) )
+summeravg <- summersum/15
+wintersum <- apply(dominant, MARGIN=1, FUN = sum, select=c(26:34) )
+winteravg <- wintersum/9
+
+avg <- cbind(springavg, summeravg, winteravg) #combining the average results
+```
+
+
+
+
+
+
+
+#### --------------------------------------------------------------------------------------------------------------------------------------------------------
+```{r}
+envdata = read.csv('~/R/enviANDdensity.csv',header=T)
+```
+
+```{r}
+install.packages("vegan")
+install.packages("cluster")
+install.packages("fpc")
+install.packages("TWIX") # 無法下載
+
+library(vegan)
+library(cluster)
+library(fpc)
+library(TWIX)
+
+
+pkgs <- c("NbClust")
+install.packages("NbClust")
+library(NbClust)
+
+library(factoextra)
+```
+
+Distance method: euclidean
+##Conduct a Nonhierarchical Clustering (NHC)
+```{r}
+#standardize data
+data = envdata[,-1]
+data.std = scale(data)   # ? scale?column z
+
+#compute distance matrix
+dist.euclidean = dist(data.std,method='euclidean')
+dist.maximum = dist(data.std,method='maximum')       # ?
+dist.manhattan = dist(data.std,method='manhattan')
+dist.canberra = dist(data.std,method='canberra')     # ?
+dist.binary = dist(data.std,method='binary')         # ?
+dist.minkowski = dist(data.std,method='minkowski')   # ?
+man/max
+
+# ? plot(dist.euclidean)
+
+#Determine number of clusters
+#### by maximizing the distance between cluster centers while minimizing the within-cluster variation
+#####Need to write a program for making scree plot and silhouette width
+
+set.seed(10)
+k.euclidean <- kmeans(dist.euclidean, centers = 10 , nstart = 10)
+ #Within cluster sum
+      # plot(k.euclidean)#?
+screeplot(k.euclidean)
+k.euclidean
+
+s.euclidean <- silhouette(integer(dist.euclidean)) # ? 
+
+silhouette(k.euclidean)
+
+data(ruspini)
+pr4 <- pam(ruspini, 4) # kmeans 不行, only pam hierarchical clustering
+silhouette(pr4)
+
+比 silhouette  Non hi or hi
+
+#compute k-means NHC around 5 mediods (clusters)
+
+##  Partitioning Around Medoids
+### Partitioning (clustering) of the data into k clusters “around medoids”, a more robust version of K-means.
+y.pam = pam(dist.euclidean,k=5) 
+plot(y.pam)
+## Clustering Large Applications
+y.clara = clara(data.std,k=5) 
+plot(y.clara)
+
+summary(y.pam) # 內容Objective function:,Isolated clusters:
+
+#evaluate cluster stability
+y.eucl.boot = clusterboot(data.std, B=100, metric='euclidean', bootmethod=c('boot','subset'), clustermethod=claraCBI, usepam=TRUE, k=5, count=FALSE)
+print(y.eucl.boot)
+# ? plot(y.eucl.boot)
+```
+
+TEST
+```{r}
+# dist.euclidean
+sum.euclidean <- 0
+for (i in 1:11){
+sum.euclidean <- sum.euclidean + (data.std[1,i]-data.std[2,i])^2
+}
+sum.euclidean <- sum.euclidean ^ 0.5
+
+# dist.manhattan
+sum.manhattan <- 0
+for (i in 1:11){
+sum.manhattan <- sum.manhattan + abs(data.std[1,i]-data.std[2,i])
+}
+
+
+```
+
+
+##Conduct a Hierarchical Clustering (HC)
+```{r}
+
+y.eucl.ward = hclust(dist.euclidean,method='ward')  #two ways of doing HC
+y.eucl.ward = agnes(dist.euclidean,method='ward')
+y.eucl.dia = diana(dist.euclidean) # ? bottom-up preocess ?
+
+y.eucl.ward = hclust(dist.euclidean,method='ward')  #two ways of doing HC
+# "ward.D", 
+# "ward.D2",
+# "single", 
+# "complete",
+# "average" (= UPGMA), ######
+# "mcquitty" (= WPGMA), 
+# "median" (= WPGMC) or
+# "centroid" (= UPGMC)
+
+y.eucl.ward = agnes(dist.euclidean,method='ward')
+#  "average" ([unweighted pair-]group [arithMetic] average method, aka ‘UPGMA’), 
+# "single" (single linkage), 
+# "complete" (complete linkage), 
+#"ward" (Ward's method),
+#"weighted" (weighted average linkage, aka ‘WPGMA’), its generalization
+# "flexible" which uses (a constant version of) the Lance-Williams formula and the par.method argument, and
+# "gaverage" a generalized "average" aka “flexible UPGMA” method also using the Lance-Williams formula and par.method.
+y.eucl.dia = diana(dist.euclidean)
+
+
+
+
+#dendrogram
+plot(y.eucl.ward,main='Wards-linkage Dendrogram',xlab='Station',labels=envdata[,1])
+rect.hclust(y.eucl.ward,k=5) #cut by #clusters ?
+plot(y.eucl.ward,main='Wards-linkage Dendrogram',xlab='Station',labels=envdata[,1])
+rect.hclust(y.eucl.ward,h=5) #cut by height ?
+
+
+#######
+
+#aggolmerative coefficient
+summary(y.eucl.ave)$ac  # ave ?
+
+#cophenetic correlation
+cor(dist.euclidean,cophenetic(y.eucl.ave))
+plot(dist.euclidean,cophenetic(y.eucl.ave),xlab="Original distances",ylab="Cophenetic distances")
+
+```
+
+
+
+

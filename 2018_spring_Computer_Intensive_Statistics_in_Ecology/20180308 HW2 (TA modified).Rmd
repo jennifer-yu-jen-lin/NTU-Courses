@@ -1,0 +1,97 @@
+---
+title: "Homework 2"
+author: "Yu-Jen Lin"
+output:
+  html_document: default
+  pdf_document: default
+---
+#### b04b01036@ntu.edu.tw
+#### --------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+## 1a. Generate 10000 random numbers from Gaussian distribution with mean=20 and variance =10, and plot the distribution.
+I use "rnorm" function to generate the Gaussian distribution with mean=20 and variance =10. Then, I use "hist" to plot the histogram of this Gaussian distribution. In order to compare with the other distribution later, I add the mean of this distribution by a blue vertical line.
+```{r}
+Gaussian <- rnorm(n=10000, mean=20, sd=sqrt(10)) 
+hist(Gaussian)
+abline(v = mean(Gaussian), col = "blue", lwd = 2)
+```
+
+
+
+
+## 1b. Generate 10000 random numbers from Binomial distribution with p=0.5 and n=40, and plot the distribution.
+First, I set a space for the following computations as "Binomial". Secondly, I use "runif" to create a series number from 0 to 1. In my case, I regard all of these results as the probability of having a head when toss a coin. Thus, if the elements in RUNIF are larger than 0.5, that means I am more prone to get a head of coin. As a result, I count all the elements in RUNIF that >0.5 by doing the summation. Eventually, I get different numbers from each loop, which means the times I might have the head of coins when I toss 40 times. I add all these numbers into "Binomial" by "append" function.
+```{r}
+Binomial <- c()
+
+for (i in c(1:10000) ){
+  RUNIF <- runif(n=40, min=0, max=1)
+  SUM <- sum(RUNIF>0.5)
+  Binomial <- append(Binomial, SUM )
+}
+```
+
+Then, I also use "hist" to plot the histogram of this Binomial distribution. In order to compare with the other distribution later, I add the mean of this distribution by a red vertical line.
+```{r}
+hist(Binomial)
+abline(v = mean(Binomial), col = "red", lwd = 2)
+```
+
+
+
+## Compare the distribution of 1a and 1b, what do you find? 
+(hint: you can use  rand  and  randn  in matlab. Or, “runif” and “rnorm” in R)
+These two distributions are quite the same because binomial distribution would approached Gaussian distributions when the sample size is large.
+
+# compare the hist
+```{r}
+par(mfrow = c(1,2)) 
+hist(Gaussian, ylim=c(0, 2500))
+abline(v = mean(Gaussian), col = "blue", lwd = 2)
+hist(Binomial, lty=2, ylim=c(0, 2500))
+abline(v = mean(Binomial), col = "red", lwd = 2)
+```
+
+# overlay the hist
+```{r}
+hist(Gaussian, xlab = "Gauss(solid) & Binom(dashed)", main = "Comparison")
+abline(v = mean(Gaussian), col = "blue", lwd = 2)
+par(new = TRUE) #New plot
+hist(Binomial, lty=2, axes = FALSE, xlab = "", ylab = "", main ="")
+abline(v = mean(Binomial), col = "red", lwd = 2)
+```
+
+
+
+
+# 2. Make a program that can select our candidates for presentation next week. This program should select randomly but avoid selecting the numbers that had been selected before. 
+# (hint: uniform distribution, loop, and if statements.)
+
+# Read roster.csv into R
+```{r}
+roster.ori <- read.csv(file="~/R/roster.csv", header=FALSE)
+roster <- t(roster.ori)
+```
+#select our candidates
+```{r}
+
+candidate <- c()
+presentation <- c()
+
+for (i in c(1:23)){
+  candidate <- ceiling(runif(n=1, min=1, max=23))
+  candidate.i <- roster[candidate] # single sampling result
+  
+  if (candidate.i %in% presentation){
+    presentation <- append(presentation,NULL)
+  } else {
+    presentation <- append(presentation,candidate.i)
+  }
+  print(presentation)
+}
+
+presentation
+
+```
+

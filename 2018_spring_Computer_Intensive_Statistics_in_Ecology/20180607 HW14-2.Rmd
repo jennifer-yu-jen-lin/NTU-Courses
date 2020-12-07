@@ -1,0 +1,197 @@
+---
+title: "Homework 14"
+author: "Yu-Jen Lin"
+output:
+  html_document: default
+  pdf_document: default
+---
+#### b04b01036@ntu.edu.tw
+#### --------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+## Assume t0=0 (two parameters). Please estimate the posterior distributions of parameters using the method Markov chain Monte Carlo (MCMC) for the average length-at-age for the female Pacific Hake (obs. sigma=0.032), considering a multiplicative error model with log-normal distribution.
+
+#### von Bertalanffy Growth Function (Considering a log-normal distribution)
+#### L(t) = L∞ (1−exp(−k(t−t0))) * e^ε   ,   ε ~ N(0,σ^2)
+
+#### L∞ : the hypothesized (mean) maximum length
+####  K : growth rate
+####  t : current age
+#### t0 : the hypothesized age when body length is 0
+
+#### with prior distributions: L∞ ~ U(40,100) and K ~ U(0.1,0.6)   @@@@@@@@@@
+
+## loading package and data
+```{r}
+library(knitr)
+library(ggplot2)
+
+Age = c(1,2,3.3,4.3,5.3,6.3,7.3,8.3,9.3,10.3,11.3,12.3,13.3)
+Length = c(15.4,28.03,41.18,46.2,48.23,50.26,51.82,54.27,56.98,58.93,59,60.91,61.83)
+
+data = cbind(Age, Length)
+
+kable(data, col.names = c("Age (year)", "Female mean length (cm)"))
+```
+
+## Check the plot of [ Length ~ Age ]
+```{r}
+dataset = data.frame(Age, Length) # combine the data
+colnames(dataset) <- c("Age", "Length") # rename the columns for plotting
+ggplot(dataset, aes(x = Age, y = Length)) +
+    geom_point()
+```
+
+#### --------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## likelihood section
+```{r}
+VBGF <-function(x, Linf, K){
+    y = Linf * (1 - exp(- K * (x - 0)))
+    return(y)
+}
+
+lognormal_like = function(Linf, K){
+    
+    like = numeric(length(Length))
+    NLL = numeric(length(Length))
+    ypred = VBGF(Age, Linf, K)
+    Dev2 =(log(Length) - log(ypred)) ^ 2
+    sigma = 0.032
+    
+    for (i in 1:length(Length)){
+        like[i] = (1 / (Age[i] * sqrt(2 * pi) * sigma)) * exp(-Dev2[i] / (2 * sigma ^ 2))
+        NLL[i] = log(like[i])
+    }
+    
+    tot_like = exp(sum(NLL))
+    
+     Outs <- NULL
+     Outs$ypred <- ypred
+     Outs$tot_like <- tot_like
+     Outs$NLL <- sum(NLL)
+     Outs$Linf <- Linf
+     Outs$K <- K 
+    
+    return(Outs)   ##@@@@@@@@@@ return(list(ypred = ypred, tot_like = tot_like, NLL = sum(NLL)))
+
+}
+```
+
+
+
+#### --------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## MCMC section
+```{r}
+DoMCMC<-function(Xinit, Ndim, Nsim = 1000, Nburn = 0, Nthin = 1){  
+    Linf_jump_max = 40
+    Linf_jump_min = -40
+    
+    K_jump_max = 0.05
+    K_jump_min = -0.05
+    
+    Xcurr <- Xinit
+    Fcurr <- -1 * lognormal_like(Linf = Xcurr[1], K = Xcurr[2])$NLL
+    Outs2 <- matrix(-9999, nrow = (Nsim - Nburn), ncol = (Ndim + 1))
+    Ipnt <- 0; Icnt <- 0
+    for(Isim in 1:Nsim)
+      { 
+        # jump function
+        Xnext = NULL
+        Xnext[1] = Xcurr[1] + runif(1, 0, 1) * (Linf_jump_max - Linf_jump_min) + Linf_jump_min 
+        Xnext[2] = Xcurr[2] + runif(1, 0, 1) * (K_jump_max - K_jump_min) + K_jump_min
+        
+        # evaluate the ratio
+        Fnext <- -1 * lognormal_like(Linf = Xnext[1], K = Xnext[2])$NLL
+        Rand1 <- log(runif(1,0,1))
+        
+        if(Fnext > Fcurr+Rand1)
+          {Fcurr <- Fnext; Xcurr <- Xnext 
+        } 
+        if (Isim %% Nthin == 0)
+          {Ipnt <- Ipnt + 1
+            if (Ipnt > Nburn){
+                Icnt <- Icnt + 1
+                Outs2[Icnt, ] <- c(Xcurr, Fcurr)
+            }
+        }
+    }
+    return(Outs2[1:Icnt,])
+}
+
+
+```
+
+#### --------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## Posterior section
+```{r}
+
+ Posterior_result <- DoMCMC(Xinit=c(0.1,100),Ndim=3,Nsim=5000,Nburn=10,Nthin=1)
+ 
+ par(mfrow=c(2,3),mar=c(5,5,5,2))
+ 
+ plot(Posterior_result[,1],main="",xlab="r",type="o")
+ plot(Posterior_result[,2],main="",xlab="N1973",type="o")
+ plot(Posterior_result[,3],main="",xlab="N2005",type="o")
+ hist(Posterior_result[,1],main="",xlab="r",col="gray")
+ hist(Posterior_result[,2],main="",xlab="N1973",col="gray")
+ hist(Posterior_result[,3],main="",xlab="N2005",col="gray")
+ 
+ print(paste("Median of r = ",median(Posterior_result[,1]),sep=""))
+ print(paste("Median of N1973 = ",median(Posterior_result[,2]),sep=""))
+ print(paste("Median of N2005 = ",median(Posterior_result[,3]),sep=""))
+ 
+
+
+
+
+```
+
+## Plot the results of L∞ and K @@@@@@@@@@@@@@
+```{r}
+par(mfrow=c(2,1),mar=c(4,4,2,2))
+
+# calculate the marginal probability
+marginal_Linf = with(RESULTs, tapply(pThetaGivenData, Linf, sum))
+plot(Linf_grid, marginal_Linf, type = "h", lwd = 3, xlab = expression(L[infinity]), ylab = bquote(paste("p(", theta, "|D)"))) 
+
+# calculate the marginal probability
+marginal_K = with(RESULTs, tapply(pThetaGivenData, K, sum))
+plot(K_grid, marginal_K, type = "h", lwd = 3, xlab = "K", ylab = bquote(paste("p(", theta, "|D)")))
+```
+
+
+
+# @@@@@@@@@@@@@@@@@@@@
+
+
+## Compare Bayesian Grid Search with MLE
+
+#### When we used the MLE in previous homework, we got:
+#### Linf = 61.08735457
+#### K = 0.30279632
+#### Both are quite similar as the results in this homework because
+#### 1) in prior distribution we used the uniform distribution and
+#### 2) we used sigma = 0.032 to start, which is the same value of MLE results.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

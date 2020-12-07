@@ -1,0 +1,362 @@
+#### "Homework 12"
+#### "Yu-Jen Lin"
+#### b04b01036@ntu.edu.tw
+#### --------------------------------------------------------------------------------------------------------------------------------------------------------
+
+#### 1. Please estimate the model parameters of four different growth functions (von Bertalanffy; Gompertz; Logis>c; Schnute–Richards) using the method maximum likelihood for the length-at-age for female Pacific hake (Merluccius productus) considering a log-normal distribution
+
+## Models
+#### 1 von Bertalanffy Growth Function
+#### -> L(t) = L∞ (1−exp(−k(t−t0)))
+#### 2 Gompertz growth model
+#### -> L(t) = L∞ exp(-exp(-k2(t-((ln(λ)-ln(k2))/k2 ))))
+#### 3 Logistic model 
+#### -> L(t) = L∞ (1 + exp(-k3(t-t3)))^(-1)
+#### 4 Schnute–Richards model] Bonus
+#### -> L(t) = L∞ exp(1 + δ*e^(-k4 t^v)) ^ (1/γ)
+
+## Considering a log-normal distribution
+#### L(t) = Model * e^ε   ,   ε ~ N(0,σ^2)
+
+## loading package and data
+
+library(knitr)
+library(ggplot2)
+
+Age = c(1,2,3.3,4.3,5.3,6.3,7.3,8.3,9.3,10.3,11.3,12.3,13.3)
+Length = c(15.4,28.03,41.18,46.2,48.23,50.26,51.82,54.27,56.98,58.93,59,60.91,61.83)
+
+data = cbind(Age, Length)
+
+kable(data, col.names = c("Age (year)", "Female mean length (cm)"))
+
+
+## Check the plot of [ Length ~ Age ]
+
+dataset = data.frame(Age, Length) # combine the data
+colnames(dataset) <- c("Age", "Length") # rename the columns for plotting
+ggplot(dataset, aes(x = Age, y = Length)) +
+  geom_point()
+
+
+
+## 1 von Bertalanffy Growth Function
+#### L(t) = L∞ (1−exp(−k(t−t0)))
+#### L∞ = Linf = hypothesized (mean) maximum length
+#### k  = growth rate
+#### t  = x = current age
+#### t0 = hypothesized age when body length is 0
+
+VBGF <- function(x, Linf = theta[1], k = theta[2], t0 = theta[3], theta = c(Linf, k, t0)){
+  y = Linf * (1 - exp(-k * (x - t0)))
+  return(y)
+}
+
+
+## 2 Gompertz growth model
+#### L(t) = L∞ exp(-exp(-k2(t-((ln(λ)-ln(k2))/k2 ))))
+#### L∞ = Linf = hypothesized (mean) maximum length
+#### k2 = (k) = rate of exponential decrease of the relative growth rate with age
+#### t  = x = current age
+#### λ  = (t0) = theoretical initial relative growth rate at zero age
+#### (I change some annotations in order to calculate in an easier way.)
+
+GGM <- function(x, Linf = theta[1], k = theta[2], t0 = theta[3], theta = c(Linf, k, t0)){
+  y = Linf * exp(- exp(- k * (x - (log(t0) - log(k)) / k)))
+  return(y)
+}
+
+
+## 3 Logistic model 
+#### L(t) = L∞ (1 + exp(-k3(t-t3)))^(-1)
+#### L∞ = Linf = hypothesized (mean) maximum length
+#### k3 = (k) = relative growth rate parameter (with units year^-1)
+#### t  = x = current age
+#### t3 = (t0) = corresponds to the inflection point of the sigmoidal curve
+#### (I change some annotations in order to calculate in an easier way.)
+
+LM <- function(x, Linf = theta[1], k = theta[2], t0 = theta[3], theta = c(Linf, k, t0)){
+  y = Linf * (1 + exp(-k*(x-t0))) ^ (-1)
+  return(y)
+}
+
+
+## 4 Schnute–Richards model (Bonus)
+#### L(t) = L∞ exp(1 + δ*e^(-k4 t^v)) ^ (1/γ)
+#### L∞ = Linf = hypothesized (mean) maximum length
+#### dimensionless parameters: δ, ν, and γ
+#### k4 has units yr^(−ν)
+
+e <- exp(1) 
+SRM <- function(x, Linf = theta[1], k = theta[2], δ = theta[3], v = theta[4], γ = theta[5], theta = c(Linf, k, δ, v, γ)){
+  y = Linf * exp(1 + δ* (e^(-k*(x^v)))) ^ (1/γ)
+  return(y)
+}
+
+
+## Log-likelihood function
+
+lognormal_like = function(x, y, FUN, Out, ...){  
+  
+  FUN = match.fun(FUN) 
+  Like = numeric(length(y))
+  NLL = numeric(length(y))
+  ypred = FUN(x, ...)
+  Dev2 = (log(Length/ypred)) ^ 2
+  sigma = sqrt(mean(Dev2))
+  
+  for (i in 1:length(Age)){ 
+    Like[i] = (1 / (x[i] * sqrt(2 * pi) * sigma)) * exp(-Dev2[i] / (2 * sigma ^ 2))
+    NLL[i] = -log(Like[i])
+  }
+  
+  if(Out==T) cat(sum(NLL),Linf,K,t0,"\n")
+  
+  Outs <- NULL
+  Outs$Pred <- ypred
+  Outs$Length <- Length
+  Outs$Dev2 <- Dev2
+  Outs$sigma <- sigma
+  Outs$Like <- Like
+  Outs$NLL <- NLL 
+  Outs$Obj <- sum(NLL)
+  
+  return(Outs)
+}
+
+lognormal_like.SRM = function(x, y, FUN, Out, ...){  
+  
+  FUN = match.fun(FUN) 
+  Like = numeric(length(y))
+  NLL = numeric(length(y))
+  ypred = FUN(x, ...)
+  Dev2 = (log(Length/ypred)) ^ 2
+  sigma = sqrt(mean(Dev2))
+  
+  for (i in 1:length(Age)){ 
+    Like[i] = (1 / (x[i] * sqrt(2 * pi) * sigma)) * exp(-Dev2[i] / (2 * sigma ^ 2))
+    NLL[i] = -log(Like[i])
+  }
+  
+  if(Out==T) cat(sum(NLL),Linf,K,δ,v,γ,"\n")
+  
+  Outs <- NULL
+  Outs$Pred <- ypred
+  Outs$Length <- Length
+  Outs$Dev2 <- Dev2
+  Outs$sigma <- sigma
+  Outs$Like <- Like
+  Outs$NLL <- NLL 
+  Outs$Obj <- sum(NLL)
+  
+  return(Outs)
+}
+
+
+## Objective function
+
+obj_function = function(theda, ...){ 
+  Outs <- lognormal_like(theda[1], theda[2], theda[3], ...)
+  obj <- Outs$Obj 
+  return(obj)
+}
+obj_function.SRM = function(theda, ...){ 
+  Outs <- lognormal_like.SRM(theda[1], theda[2], theda[3], theda[4], theda[5],...)
+  obj <- Outs$Obj 
+  return(obj)
+}
+
+
+## MLE of parameters
+
+model_VBGF = optim(c(60, 0.7, 0), obj_function, FUN = VBGF, x = Age, y = Length, Out = F, hessian = T)
+model_GGM = optim(c(70, 0.6, 0), obj_function, FUN = GGM, x = Age, y = Length, Out = F, hessian = T)
+model_LM = optim(c(59, 0.7, 0), obj_function, FUN = LM, x = Age, y = Length, Out = F, hessian = T)
+model_SRM = optim(c(61, 0.7, 0, 0, 0.5), obj_function.SRM, FUN = SRM, x = Age, y = Length, Out = F, hessian = T)
+
+
+## Results
+
+param_VBGF <- model_VBGF$par
+param_GGM <- model_GGM$par
+param_LM <- model_LM$par
+param_SRM <- model_SRM$par
+
+sd_VBGF <- sqrt(diag(solve(model_VBGF$hessian)))
+sd_GGM <- sqrt(diag(solve(model_GGM$hessian)))
+sd_LM <- sqrt(diag(solve(model_LM$hessian)))
+sd_SRM <- sqrt(diag(solve(model_SRM$hessian))) 
+
+model_result_VBGF <- cbind(param_VBGF, sd_VBGF)
+model_result_GGM <- cbind(param_GGM, sd_GGM)
+model_result_LM <- cbind(param_LM, sd_LM)
+model_result_SRM <- cbind(param_SRM, sd_SRM)
+
+rownames(model_result_VBGF) <- c("L inf", "k", "t0")
+rownames(model_result_GGM) <- c("L inf", "k2", "λ")
+rownames(model_result_LM) <- c("L inf", "k3", "t3")
+rownames(model_result_SRM) <- c("L inf", "K4", "δ", "v", "γ" ) 
+
+kable(model_result_VBGF, col.names = c("Estimated parameters", "Standard deviation"), caption = "1 von Bertalanffy growth function", digits = 3)
+kable(model_result_GGM, col.names = c("Estimated parameters", "Standard deviation"), caption = "2 Gompertz growth model", digits = 3)
+kable(model_result_LM, col.names = c("Estimated parameters", "Standard deviation"), caption = "3 Logistic model", digits = 3)
+kable(model_result_SRM, col.names = c("Estimated parameters", "Standard deviation"), caption = "4 Schnute–Richards model", digits = 3)
+
+
+#### --------------------------------------------------------------------------------------------------------------------------------------------------------
+#### 2. Calculate the 95% confidence intervals for Linf (Professor said we don't need to do this on each parameter) of the growth functions by using the likelihood profile method
+
+## Negative log-likelihood
+
+VBGF_like = lognormal_like(data[, 1], data[, 2], VBGF, theta = param_VBGF, Out = F)$Obj
+GGM_like = lognormal_like(data[, 1], data[, 2], GGM, theta = param_GGM, Out = F)$Obj
+LM_like = lognormal_like(data[, 1], data[, 2], LM, theta = param_LM, Out = F)$Obj
+SRM_like = lognormal_like(data[, 1], data[, 2], SRM, theta = param_SRM, Out = F)$Obj
+
+
+## 1 VBGF [ L∞ - 95% confidence interval ]
+
+obj_fun = function(theta, ...){ 
+  Outs <- lognormal_like(k = theta[1], t0 = theta[2], ...)
+  obj <- Outs$Obj
+  return(obj)
+}
+
+LVBGF_like = numeric()
+LVBGF_range = seq(from = param_VBGF[1] - 40, to = param_VBGF[1] + 100, length.out = 100)
+for(i in 1:100){
+  LVBGF_est = optim(param_VBGF[c(2, 3)], obj_fun, FUN = VBGF, Linf = LVBGF_range[i], x = data[, 1], y = data[ ,2], Out = F)$par
+  LVBGF_like[i] = 2 * (- VBGF_like + lognormal_like(data[, 1], data[, 2], VBGF, Linf =  LVBGF_range[i], k = LVBGF_est[1], t0 = LVBGF_est[2], Out = F)$Obj)
+}
+
+LVBGF_accept = which(LVBGF_like < qchisq(0.95, 1))
+LVBGF_ci = LVBGF_range[c(min(LVBGF_accept), max(LVBGF_accept))]
+
+
+## 2 GGM [ L∞ - 95% confidence interval ]
+
+obj_fun = function(theta, ...){ 
+  Outs <- lognormal_like(k = theta[1], t0 = theta[2], ...)
+  obj <- Outs$Obj
+  return(obj)
+}
+
+LGGM_like = numeric()
+LGGM_range = seq(from = param_GGM[1] - 40, to = param_GGM[1] + 80, length.out = 100)
+for(i in 1:100){
+  LGGM_est = optim(param_GGM[c(2, 3)], obj_fun, FUN = GGM, Linf = LGGM_range[i], x = data[, 1], y = data[ ,2], Out = F)$par
+  LGGM_like[i] = 2 * (- GGM_like + lognormal_like(data[, 1], data[, 2], GGM, Linf =  LGGM_range[i], k = LGGM_est[1], t0 = LGGM_est[2], Out = F)$Obj)
+}
+
+LGGM_accept = which(LGGM_like < qchisq(0.95, 1))
+LGGM_ci = LGGM_range[c(min(LGGM_accept), max(LGGM_accept))]
+
+
+## 3 LM [ L∞ - 95% confidence interval ]
+
+obj_fun = function(theta, ...){ 
+  Outs <- lognormal_like(k = theta[1], t0 = theta[2], ...)
+  obj <- Outs$Obj
+  return(obj)
+}
+
+LLM_like = numeric()
+LLM_range = seq(from = param_LM[1] - 40, to = param_LM[1] + 80, length.out = 100)
+for(i in 1:100){
+  LLM_est = optim(param_LM[c(2, 3)], obj_fun, FUN = LM, Linf = LLM_range[i], x = data[, 1], y = data[ ,2], Out = F)$par
+  LLM_like[i] = 2 * (- LM_like + lognormal_like(data[, 1], data[, 2], LM, Linf =  LLM_range[i], k = LLM_est[1], t0 = LLM_est[2], Out = F)$Obj)
+}
+
+LLM_accept = which(LLM_like < qchisq(0.95, 1))
+LLM_ci = LLM_range[c(min(LLM_accept), max(LLM_accept))]
+
+
+## 4 SRM [ L∞ - 95% confidence interval ]
+
+obj_fun = function(theda, ...){ 
+  Outs <- lognormal_like.SRM(theda[1], theda[2], theda[3], theda[4], theda[5],...)
+  obj <- Outs$Obj 
+  return(obj)
+}
+
+LSRM_like = numeric()
+LSRM_range = seq(from = param_SRM[1] - 40, to = param_SRM[1] + 80, length.out = 100)
+for(i in 1:100){
+  LSRM_est = optim(param_SRM[c(2, 3, 4, 5)], obj_fun, FUN = SRM, Linf = LSRM_range[i], x = data[, 1], y = data[ ,2], Out = F)$par
+  LSRM_like[i] = 2 * (- SRM_like + lognormal_like(data[, 1], data[, 2], SRM, Linf =  LSRM_range[i], k = LSRM_est[1], δ = LSRM_est[2], v = LSRM_est[3], γ = LSRM_est[4], Out = F)$Obj)
+}
+
+LSRM_accept = which(LSRM_like < qchisq(0.95, 1))
+LSRM_ci = LSRM_range[c(min(LSRM_accept), max(LSRM_accept))]
+
+
+## Compare all the CI of Linf in different models
+
+CI = rbind(LVBGF_ci, LGGM_ci, LLM_ci, LSRM_ci)
+kable(CI, col.names = c("CI lower limit", "CI upper limit"))
+
+
+#### --------------------------------------------------------------------------------------------------------------------------------------------------------
+#### 3. Conduct the model selection based on the AICc and quantify the plausibility of each model by using “Akaike weight (wi)”
+
+#calculate AICc for both models
+aicc_VBGF = 2 * VBGF_like + 2 * 3 + (2 * 3 * 4) / (204 - 3 - 1)
+aicc_GGM = 2 * GGM_like + 2 * 3 + (2 * 3 * 4) / (204 - 3 - 1)
+aicc_LM = 2 * LM_like + 2 * 3 + (2 * 3 * 4) / (204 - 3 - 1)
+aicc_SRM = 2 * SRM_like + 2 * 3 + (2 * 3 * 4) / (204 - 3 - 1)
+
+#find the best model with the lower AICc
+min_aicc = min(aicc_VBGF, aicc_GGM, aicc_LM, aicc_SRM)
+
+#calculate weights based on AICc
+aicc_change = c(aicc_VBGF, aicc_GGM, aicc_LM, aicc_SRM) - min_aicc
+weight = exp(-0.5 * aicc_change) / sum(exp(-0.5 * aicc_change))
+
+#show results of AICc and weights
+m_criterion = cbind(c(aicc_VBGF, aicc_GGM, aicc_LM, aicc_SRM), aicc_change, weight)
+rownames(m_criterion) <- c("von Bertalanffy", "Gompertz", "Logistic", "Schnute–Richards")
+colnames(m_criterion) <- c("AICc", "AICc change", "Weight")
+kable(m_criterion)
+
+
+#### --------------------------------------------------------------------------------------------------------------------------------------------------------
+#### 4. Estimate the average model based on wi and plot all the growth curves together
+
+## Average model based on wi
+
+pred_VBGF = VBGF(seq(from = min(data[ ,1]), to = max(data[, 1]), length.out = 100), theta = param_VBGF)
+pred_GGM = GGM(seq(from = min(data[ ,1]), to = max(data[, 1]), length.out = 100), theta = param_GGM)
+pred_LM = LM(seq(from = min(data[ ,1]), to = max(data[, 1]), length.out = 100), theta = param_LM)
+pred_SRM = SRM(seq(from = min(data[ ,1]), to = max(data[, 1]), length.out = 100), theta = param_SRM)
+pred_ave = weight[1] * pred_VBGF + weight[2] * pred_GGM + weight[3] * pred_LM +  weight[4] * pred_SRM
+
+
+## Plot all the growth curves together
+
+dataset = data.frame(rep(seq(from = min(data[ ,1]), to = max(data[, 1]), length.out = 100), 5), c(pred_VBGF, pred_GGM, pred_LM, pred_SRM, pred_ave), c(rep("VBGF", 100), rep("GGM",100), rep("LM",100), rep("SRM",100), rep("Average", 100)))
+colnames(dataset) <- c("Age", "Esimated length", "Model")
+
+# growth curves
+p <- ggplot() +
+  geom_line(aes(x = dataset$Age, y = dataset$`Esimated length`, col = dataset$Model), linetype = "dashed") +
+  scale_color_discrete(name = "Model") +
+  labs( x = "Age", y = "Length")
+p <- p + geom_point(aes(x = data[, 1], y = data[, 2]))
+p # The Average curve is covered by the SRM curve.
+
+
+####Because the average curve is covered by the SRM curve, I plot this result again without SRM. (But the average model still considers the weight of SRM.)
+
+dataset = data.frame(rep(seq(from = min(data[ ,1]), to = max(data[, 1]), length.out = 100), 4), c(pred_VBGF, pred_GGM, pred_LM, pred_ave), c(rep("VBGF",100), rep("GGM",100), rep("LM",100), rep("Average", 100)))
+colnames(dataset) <- c("Age", "Esimated length", "Model")
+
+# growth curves
+p <- ggplot() +
+  geom_line(aes(x = dataset$Age, y = dataset$`Esimated length`, col = dataset$Model), linetype = "dashed") +
+  scale_color_discrete(name = "Model") +
+  labs( x = "Age", y = "Length")
+p <- p + geom_point(aes(x = data[, 1], y = data[, 2]))
+p # In this graph, we can clearly see the Average curve.
+
+
+

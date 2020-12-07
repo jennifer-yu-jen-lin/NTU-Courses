@@ -1,0 +1,195 @@
+---
+title: "Homework 13"
+author: "Yu-Jen Lin"
+output:
+  html_document: default
+  pdf_document: default
+---
+#### b04b01036@ntu.edu.tw
+#### --------------------------------------------------------------------------------------------------------------------------------------------------------
+
+The von Bertalanffy growth function is used to describe body length of fish as a function of its age. It is defined as L(t)=L∞(1−e−K(t−t0)) where L∞ is the hypothesized (mean) maximum length, K is growth rate, t is current age and t0 is the hypothesized age when body length is 0.
+
+In this assignment, we try to model body length of fish using the following regression model: L(t)=L∞(1−e−K(t−t0))∗eϵ with ϵ ~ N(0,σ2). Parameters will be estimated using the Bayesian grid search with priors L∞ ~ U(40,100) and K ~ U(0.1,0.6).
+
+#### Assume t0 = 0 and sigma=0.032, please estimate the parameters of L∞ and K by using the method of Bayesian Grid Search for the average length-at-age data Pacific Hake, respec%vely, considering a mul%plica%ve error model with log-normal distribu%on with the prior informa%on of K~U[0.1,0.6] and L∞~U[40,100].
+
+Q. Assume t0=0 (two parameters). Please estimate the posterior distributions of parameters using the method Bayesian grid search for the average length-at-age for the female Pacific Hake, respectively, considering a multiplicative error model with log-normal distribution.
+
+## Models
+#### 1 von Bertalanffy Growth Function
+#### -> L(t) = L∞ (1−exp(−k(t−t0)))
+#### 2 Gompertz growth model
+#### -> L(t) = L∞ exp(-exp(-k2(t-((ln(λ)-ln(k2))/k2 ))))
+#### 3 Logistic model 
+#### -> L(t) = L∞ (1 + exp(-k3(t-t3)))^(-1)
+#### 4 Schnute–Richards model] Bonus
+#### -> L(t) = L∞ exp(1 + δ*e^(-k4 t^v)) ^ (1/γ)
+
+## Considering a log-normal distribution
+#### L(t) = Model * e^ε   ,   ε ~ N(0,σ^2)
+
+## loading package and data
+```{r}
+library(knitr)
+library(ggplot2)
+
+Age = c(1,2,3.3,4.3,5.3,6.3,7.3,8.3,9.3,10.3,11.3,12.3,13.3)
+Length = c(15.4,28.03,41.18,46.2,48.23,50.26,51.82,54.27,56.98,58.93,59,60.91,61.83)
+
+data = cbind(Age, Length)
+
+kable(data, col.names = c("Age (year)", "Female mean length (cm)"))
+```
+
+## Check the plot of [ Length ~ Age ]
+```{r}
+dataset = data.frame(Age, Length) # combine the data
+colnames(dataset) <- c("Age", "Length") # rename the columns for plotting
+ggplot(dataset, aes(x = Age, y = Length)) +
+    geom_point()
+```
+
+
+#### --------------------------------------------------------------------------------------------------------------------------------------------------------
+```{r}
+
+ # initial parameters 
+ obs_N=NULL
+ sigma=NULL
+ 
+ obs_N[9] = 453
+ obs_N[16] = 559
+ obs_N[26] = 2280
+
+ sigma[9] = 0.4
+ sigma[16] = 0.47
+ sigma[26] = 0.36
+```
+
+# (prof)
+## likelihood section
+
+```{r}
+ # population dynamics model
+ pop_model <- function(r,N0){
+  
+ N = NULL
+ Dev2 = NULL
+ N[1] = N0
+ for(t in 2:33){
+ N[t] = N[t-1]*(1+r)  
+ Dev2[t]=(log(obs_N[t]/N[t]))^2
+ }
+
+ Like_1 = 1/obs_N[9]*(1/sqrt(2*pi*sigma[9]*sigma[9]))*exp(-Dev2[9]/(2*sigma[9]*sigma[9]))
+ Like_2 = 1/obs_N[16]*(1/sqrt(2*pi*sigma[16] *sigma[16]))*exp(-Dev2[16]/(2*sigma[16]*sigma[16]))
+ Like_3 = 1/obs_N[26]*(1/sqrt(2*pi*sigma[26] *sigma[26]))*exp(-Dev2[26]/(2*sigma[26]*sigma[26]))
+ neg_likelihood =  -(log(Like_1)+log(Like_2)+log(Like_3))
+ totoal_like = exp(-neg_likelihood)
+ return(totoal_like)
+ }
+ #------------------------------------------------------------------------------- 
+ pop_model(r=0.1,N0=100)
+```
+
+VBGF <-function(x, Linf, K){
+    y = Linf * (1 - exp(- K * (x - 0)))
+    return(y)
+}
+
+lognormal_like = function(Linf, K){
+    
+    like = numeric(length(length))
+    LL = numeric(length(length))
+    ypred = VBGF(age, Linf, K)
+    dev2 =(log(length) - log(ypred)) ^ 2
+    sigma = 0.2 # 0.032
+    
+    for (i in 1:length(length)){
+        like[i] = (1 / (age[i] * sqrt(2 * pi) * sigma)) * exp(-dev2[i] / (2 * sigma ^ 2))
+        LL[i] = log(like[i])
+    }
+    
+    tot_like = exp(sum(LL))
+    return(tot_like)
+}
+
+
+#### --------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## Prior section
+(grid search)
+```{r}
+# define the grid of each parameter
+Linf_grid = seq(40, 100, length.out = 1000) # L∞ ~ U(40,100)  # 1000??????? 0.1
+K_grid = seq(0.1, 0.6, length.out = 1000) # K ~ U(0.1,0.6) # 0.001?
+
+# prior porbability
+pLinf_grid = rep(1, length(Linf_grid))
+pK_grid = rep(1, length(K_grid))
+pTheta_matrix = expand.grid(Linf = pLinf_grid, K = pK_grid)
+
+# expand the combination of grid 
+Theta_matrix = expand.grid(Linf = Linf_grid, K = K_grid)
+```
+
+#### --------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## Posterior section
+```{r}
+# negtive likelihood values of each grid
+pDataGivenTheta = mapply(lognormal_like, Theta_matrix[,1], Theta_matrix[,2]) # pop_model -> lognormal_like # likelihood
+
+# Theta_matrix "Linf" "K"
+
+# Compute the posterior density
+pData = sum(pDataGivenTheta * pTheta_matrix[, 1] * pTheta_matrix[, 2])
+pThetaGivenData = (pDataGivenTheta * pTheta_matrix[, 1] * pTheta_matrix[, 2]) / pData
+
+# arrange the results
+RESULTs = cbind(Theta_matrix, pThetaGivenData)
+```
+
+# Plot posterior distributions of parameters L∞ and K  @@@@@@@@
+```{r}
+par(mfrow=c(2,1),mar=c(4,4,2,2))
+
+# calculate the marginal probability
+marginal_Linf = with(RESULTs, tapply(pThetaGivenData, Linf, sum))
+plot(Linf_grid, marginal_Linf, type = "h", lwd = 3, xlab = expression(L[infinity]), ylab = bquote(paste("p(", theta, "|D)"))) ######@@@@@@ xlab ylab xlab="r",ylab=bquote(paste("p(",theta,"|D)"))) ?????????
+
+
+# calculate the marginal probability
+marginal_K = with(RESULTs, tapply(pThetaGivenData, K, sum))
+plot(K_grid, marginal_K, type = "h", lwd = 3, xlab = "K", ylab = bquote(paste("p(", theta, "|D)"))) ############# xlab="N1973",ylab=bquote(paste("p(",theta,"|D)"))) 
+
+abline =  (v=linf[which.max(marginal_K),col = "red", lwd=2]) # median mean dont use max
+  text
+  
+
+# compare w/ ML / cuz prior -> uniform / same sigma start
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

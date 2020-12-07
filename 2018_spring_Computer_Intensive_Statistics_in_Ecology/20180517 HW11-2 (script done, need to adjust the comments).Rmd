@@ -1,0 +1,128 @@
+---
+title: "Homework 11"
+author: "Yu-Jen Lin"
+output:
+  html_document: default
+  pdf_document: default
+---
+#### b04b01036@ntu.edu.tw
+#### --------------------------------------------------------------------------------------------------------------------------------------------------------
+
+#### The von Bertalanffy Growth Function describes the body growth in length of most fish, i.e.
+
+#### L(t)=L∞(1−exp(−K(t−t0)))e^ε       ε~N(0,σ2)
+#### L∞ = hypothesized (mean) maximum length
+#### K  = growth rate
+#### t  = age
+#### t0 = hypothesized age when body length is 0
+
+#### Please estimate the three parameters using the method maximum likelihood for the average length-at-age for male and female Pacific Hake, respectively, considering a multiplicative error model with log-normal distribu%on.
+
+## loading data
+```{r}
+library(knitr)
+library(ggplot2)
+
+Age = c(1,2,3.3,4.3,5.3,6.3,7.3,8.3,9.3,10.3,11.3,12.3,13.3)
+Length = c(15.4,28.03,41.18,46.2,48.23,50.26,51.82,54.27,56.98,58.93,59,60.91,61.83)
+
+#show data
+kable(cbind(Age, Length), col.names = c("Age (year)", "Female mean length (cm)"))
+```
+
+## Explore the relationship between body length and age
+```{r}
+#prepare data for plotting
+dataset = data.frame(Age, Length)
+colnames(dataset) <- c("Age", "Length")
+
+#draw graph
+ggplot(dataset, aes(x = Age, y = Length)) +
+    geom_point()
+```
+It seems that growth rate declines as age increases and the von Bertalanffy growth function is appropriate.
+
+## The von Bertalanffy growth function
+Define function VBGF that calculates estimated length using the von Bertalanffy growth function, which would be used in our regression model.
+```{r}
+VBGF <-function(x, Linf, K, t0){
+    y = Linf * (1 - exp(-K * (x - t0)))
+    return(y)
+}
+```
+
+## Log-likelihood function for the regression
+Define function lognormal_like which calculates the log-likelihood of
+```{r}
+lognormal_like = function(x, y, Linf, K, t0, Out){   # function(Linf,K,t0,Out){
+    
+    Like = numeric(length(y))
+    NLL = numeric(length(y))
+    ypred = VBGF(x, Linf, K, t0)
+    Dev2 = (log(Length/ypred)) ^ 2
+    sigma = sqrt(mean(Dev2))
+    
+    for (i in 1:length(Age)){ 
+        Like[i] = (1 / (x[i] * sqrt(2 * pi) * sigma)) * exp(-Dev2[i] / (2 * sigma ^ 2))
+        NLL[i] = -log(Like[i])
+    }
+    
+    #show each iteration if Out is set as TRUE
+    if(Out==T) cat(sum(NLL),Linf,K,t0,"\n")
+    
+    #calculate various informations about the log-likelihood
+        Outs <- NULL
+        Outs$Pred <- ypred
+        Outs$Length <- Length
+        Outs$Dev2 <- Dev2
+        Outs$sigma <- sigma
+        Outs$Like <- Like
+        Outs$NLL <- NLL 
+        Outs$Obj <- sum(NLL)
+        
+    return(Outs)
+}
+```
+
+## Define objective function: sum of negative log-likelihood
+```{r}
+obj_function = function(theda, ...){ 
+    Outs <- lognormal_like(Linf = theda[1], K = theda[2], t0 = theda[3], ...)
+    obj <- Outs$Obj 
+    return(obj)
+}
+```
+
+## Find the MLE of parameters
+Using optimization method, we try to find values of the three parameters ( L(t)=L∞(1−exp(−K(t−t0)))e^ε ) that maximizes the likelihood function (=minimize negative log-likelihood function) for our regression model. 
+```{r}
+Model = optim(c(100, 0.2, 0), obj_function, x = Age, y = Length, Out = F, hessian = T)
+```
+
+## Display model results
+```{r}
+# Print the likelihood value and predicted value based on the MLE estimates  
+pars <- Model$par
+Model_output <- lognormal_like(Age, Length, pars[1], pars[2], pars[3], Out=T)
+print(Model_output)
+
+sd <- sqrt(diag(solve(Model$hessian)))
+Model_result <- cbind(pars, sd)
+rownames(Model_result) <- c("L inf", "K", "t0")
+
+kable(Model_result, col.names = c("Estimated parameters", "Standard deviation"), caption = "Model for female fish body length", digits = 3)
+```
+
+## Visualize estimations of regression model
+```{r}
+#prepare data for plotting
+dataset = data.frame(Age, Length, VBGF(Age, pars[1], pars[2], pars[3]))
+colnames(dataset) <- c("Age", "Actual length", "Esimated length")
+
+#draw graph
+ggplot(dataset, aes(x = Age)) +
+    geom_point(aes(y = `Actual length`)) +
+    geom_line(aes(y = `Esimated length`)) +
+    labs(title = "Regression model using von Bertalanffy growth function", y = "Fish length")
+```
+

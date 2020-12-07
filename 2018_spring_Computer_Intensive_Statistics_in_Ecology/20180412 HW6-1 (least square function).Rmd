@@ -1,0 +1,256 @@
+---
+title: "Homework 6"
+author: "Yu-Jen Lin"
+output:
+  pdf_document: default
+  html_document: default
+---
+#### b04b01036@ntu.edu.tw
+#### --------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+#### Set working directory
+```{r}
+setwd("~/R")
+```
+
+#### --------------------------------------------------------------------------------------------------------------------------------------------------------
+
+#### 1. Write a function to do root-finding based on Newton-Ralphson method and solve for
+#### sin(x)/x-0.6=0. (Note: write your own codes, set tol=0.000001, try different initial values)
+
+#### Plot the equation sin(x)/x-0.6=0
+I first plot the equation (black) and the horizontal line that y=0 (blue). I find that there are 2 roots of this equation.
+```{r}
+eq = function(x){y=sin(x)/x-0.6}
+curve(eq, from=-50, to=50, xlab="x", ylab="y = sin(x)/x-0.6", ylim = c(-1, 1))
+abline(h=0, col=4)
+
+
+eq = function(x){y=sin(x)/x-0.6}
+curve(eq, from=-10, to=10, xlab="x", ylab="y = sin(x)/x-0.6", ylim = c(-1, 1))
+abline(h=0, col=4)
+```
+
+#### Calculate the derivative of a function in r
+In order to calculate the derivative of a function, I install the "Deriv" package.
+```{r}
+install.packages("Deriv")
+library(Deriv)
+
+# Use Deriv, I get the derivative of this function "eq".
+# eq = function(x){y=sin(x)/x-0.6}
+Deriv(eq) # Through this step, now I know that Deriv(eq) = (cos(x) - sin(x)/x)/x.
+```
+
+#### Newton-Ralphson method
+#### x1 <- x - f(x)/f'(x)
+When improvement < tolerance, stop the loop.
+  improvement = | x1 - x | / x  
+  tolerance = 0.000001
+```{r}
+# Set the initial values
+x1 = -1 # initial value
+x <- 0 # in order to begin the calculation
+  
+# Use for loop to repeat the process until the tol<=0.000001.
+for (i in c(1:100000)) {
+  if ((abs(x1-x)/x1) >= 0.000001){  
+    # When improvement < tolerance, stop the loop. Now improvement >= tolerance, keep repeating the loop.
+    x <- x1
+    f.x <- sin(x)/x-0.6
+    Fun.deriv.x <- function(x){(cos(x) - sin(x)/x)/x}
+  
+    # x1 <- x - f(x)/f'(x)
+    x1 <- x - f.x / Fun.deriv.x(x)
+    
+  }else{
+    print(x)
+    print(i)
+    ini.1 <- x
+    break
+  }
+}
+```
+
+I repeat last step by setting the different initial values = 2,3 as examples to show that they all converge to the same roots.
+```{r}
+######## REPEAT ##################################################
+# Set the initial values
+x1 = 2 # initial value
+x <- 0 # in order to begin the calculation
+  
+# Use for loop to repeat the process until the tol<=0.000001.
+for (i in c(1:100000)) {
+  if ((abs(x1-x)/x1) >= 0.000001){  
+    # When improvement < tolerance, stop the loop. Now improvement >= tolerance, keep repeating the loop.
+    x <- x1
+    f.x <- sin(x)/x-0.6
+    Fun.deriv.x <- function(x){(cos(x) - sin(x)/x)/x}
+  
+    # x1 <- x - f(x)/f'(x)
+    x1 <- x - f.x / Fun.deriv.x(x)
+    
+  }else{
+    ini.2 <- x
+    break
+  }
+}
+######## REPEAT ##################################################
+# Set the initial values
+x1 = 3 # initial value
+x <- 0 # in order to begin the calculation
+  
+# Use for loop to repeat the process until the tol<=0.000001.
+for (i in c(1:100000)) {
+  if ((abs(x1-x)/x1) >= 0.000001){  
+    # When improvement < tolerance, stop the loop. Now improvement >= tolerance, keep repeating the loop.
+    x <- x1
+    f.x <- sin(x)/x-0.6
+    Fun.deriv.x <- function(x){(cos(x) - sin(x)/x)/x}
+  
+    # x1 <- x - f(x)/f'(x)
+    x1 <- x - f.x / Fun.deriv.x(x)
+    
+  }else{
+    ini.3 <- x
+    break
+  }
+}
+```
+
+#### All converge to the same roots
+I conclude the results and find that different initial values = 1,2,3 all converge to the same roots.
+```{r}
+initial.x <- c(1,2,3)
+roots.x <- c(ini.1, ini.2, ini.3)
+roots <- data.frame(initial.x, roots.x)
+roots
+```
+
+
+#### --------------------------------------------------------------------------------------------------------------------------------------------------------
+
+#### 2. Use data from Vidal (1980) and find the Belehradek's equation for C2, C3, C4, C5 by minimizing the least square error, and set b=-2.05. Plot the data and fitted curves. (Hint: use optim in R or fminsearch in Matlab)
+
+#### Read VidalTvsDuration.txt into R
+```{r}
+VidalTvsDuration <- read.table(file="~/R/VidalTvsDuration.txt", header=TRUE)
+```
+
+#### Belehradek s equation for zooplankton development time
+#### D = a*(T-α)^b
+D = development time of a stage
+a = parameter (unknown)
+T = temperature
+α = parameter (unknown)
+b = -2.05 (we set this parameter)
+```{r}
+temp <- VidalTvsDuration$tempearture
+D.C2 <- VidalTvsDuration$C2
+D.C3 <- VidalTvsDuration$C3
+D.C4 <- VidalTvsDuration$C4
+D.C5 <- VidalTvsDuration$C5
+
+
+
+
+######
+data.C2 <- data.frame(D.C2, temp)
+
+FUN.SSR.C2 <- function(data, par){
+   with(data.C2, sum (( D.C2 - par[1]*(temp-par[2])^(-2.05) ) ^ 2 ))  # sum of (yi - yi.hat)^2
+}
+# Minimizing the least square error
+optimization <- optim(par=c(5,5), fn=FUN.SSR.C2, data=data.C2)
+########
+
+
+
+
+# SSR
+FUN.SSR.C2 <- function(a,α){
+   SSR.C2   <-   sum (( D.C2 - a*(temp-α)^(-2.05) ) ^ 2 )  # sum of (yi - yi.hat)^2
+  return(SSR.C2)
+}
+
+# Set the initial values
+ini.SSR.C2 <- FUN.SSR.C2(5,7)
+ini.SSR.C2
+
+
+
+
+
+
+
+
+# SSR
+
+FUN.SSR.C2 <- function(a,α){
+   SSR.C2   <-   sum (( D.C2 - a*(temp-α)^(-2.05) ) ^ 2 )  # sum of (yi - yi.hat)^2
+  return(SSR.C2)
+}
+# Minimizing the least square error
+optimization <- optim(a=1, α=2, fn=FUN.SSR.C2)
+
+
+#######
+
+
+
+
+# SSR
+
+FUN.SSR.C2 <- function(a,α){
+   SSR.C2   <-   sum (( D.C2 - a*(temp-α)^(-2.05) ) ^ 2 )  # sum of (yi - yi.hat)^2
+  return(SSR.C2)
+}
+# Minimizing the least square error
+optimization <- optim(c(a=1,α=2), fn=FUN.SSR.C2, data=data.C2)
+
+
+
+
+
+# Minimizing the least square error
+optim(par=c(1,2), fn=FUN.SSR.C2, data=GGG)
+u <-optim(par=c(1,2), fn=FUN.SSR.C2)
+u
+
+
+# SSR
+SSR.C2 <- 0
+FUN.SSR.C2 <- function(a,α){
+   SSR.C2   <-   sum (( DDD - a*(TTT-α)^(-2.05) ) ^ 2 )  # sum of (yi - yi.hat)^2
+  return(SSR.C2)
+}
+
+
+
+optim( c(5,7) , FUN.SSR.C2)
+
+
+
+# 
+plot(
+  x = rep(temp,4),
+  y = c(D.C2, D.C3, D.C4, D.C5), 
+  ylab = "development time",
+  xlab = "tempearture")
+
+
+
+
+```
+```{r}
+
+F1 <- function(x,y){
+  x+2+4*y
+  
+}
+
+optim(par=c(1,2), fn=F1, data=GGG)
+```
+
+

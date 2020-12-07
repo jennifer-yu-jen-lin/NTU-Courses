@@ -1,0 +1,228 @@
+---
+title: "Homework 3"
+author: "Yu-Jen Lin"
+output:
+  html_document: default
+  pdf_document: default
+---
+#### b04b01036@ntu.edu.tw
+#### --------------------------------------------------------------------------------------------------------------------------------------------------------
+
+#### Set working directory
+```{r}
+setwd("~/R")
+```
+
+#### Read enviANDdensity.csv into R
+```{r}
+enviANDdensity <- read.csv(file="~/R/enviANDdensity.csv", header=TRUE)
+```
+Because we only need the data in "FishDensity..ind..1000m3." and "CopepodDensity.ind..m3.", I take these two columns out and set as "FishDensity" and "CopepodDensity" separately.
+```{r}
+FishDensity <- enviANDdensity$FishDensity..ind..1000m3.
+CopepodDensity <- enviANDdensity$CopepodDensity.ind..m3.
+```
+
+√[ Σ(Xi-X̄)2 / (n-1)] 
+
+
+
+## 1. Compute the mean and SE(mean) for the fish and copepod densities (assuming all data points are independent) respectively, using both normal theory and non-parametric bootstrap. Plot the histogram of bootstrapped means with bootstrap 1000 times. (Normal theory simply means using the standard formula to estimate SE.)
+#### mean and SE(mean)
+First, I have to build a SE function in order to process the following steps more easily. 
+SE = √[ Σ[(Xi-X̄)＾2] / (n-1)] 
+```{r}
+StandardError <- function(x){
+  square.sum <- 0
+  for (i in x){
+    square <- (x[i]-mean(x))^2
+    square.sum <- square.sum + square
+  }
+  ( square.sum / (length(x)-1) ) ^ 0.5
+}
+
+
+square.sum <- 0
+square <- c()
+for (i in FishDensity){
+    square[i] <- (FishDensity[i]-mean(FishDensity))^2
+}
+
+square
+square.sum <- sum(square)
+
+  z <- ( square.sum / (length(FishDensity)-1) ) ^ 0.5
+z
+
+
+square 54438.72
+
+(FishDensity[34]-mean(FishDensity))^2
+
+z <- StandardError(FishDensity)
+```
+
+StandarError(FishDensity)
+
+
+
+```{r}
+FishDensity.mean <- mean(FishDensity)
+FishDensity.SE <- var(FishDensity)^0.5/length(FishDensity)^0.5
+CopepodDensity.mean <- mean(CopepodDensity)
+CopepodDensity.SE <- var(CopepodDensity)^0.5/length(CopepodDensity)^0.5
+```
+#### non-parametric bootstrap
+
+```{r}
+bootstrap.means <- c()
+for (i in 1:1000) {
+bootstrap.i <- sample(FishDensity, size=length(FishDensity), replace=TRUE)
+bootstrap.means[i] <- mean(bootstrap.i)
+}
+bootstrap.means
+```
+
+```{r}
+bootstrap.means.mean <- mean(bootstrap.means)
+bootstrap.means.mean
+```
+
+#### plot the histogram
+I plot the histogram of bootstrapped means with bootstrap 1000 times. The black line is the mean of bootstrap means. The blue line is the mean of original sampling. We can see that they are really close to each other.
+```{r}
+hist(bootstrap.means)
+abline(v = FishDensity.mean, col = "black", lwd = 2)
+abline(v = bootstrap.means.mean, col = "blue", lwd = 2)
+```
+Compare the mean of bootstrap means with the original sampling mean.
+They are almost the same number, only that through doing bootstrap, our mean of bootstrap means is closer to the original population mean.
+```{r}
+FishDensity.mean
+bootstrap.means.mean
+```
+
+## 2. Compute the median and bootstrapped SE(median) for the fish and copepod densities. Plot the histogram of bootstrapped medians with bootstrap 1000 times.
+```{r}
+FishDensity.median <- median(enviANDdensity$FishDensity..ind..1000m3.)
+CopepodDensity.median <- median(enviANDdensity$CopepodDensity.ind..m3.)
+```
+#### non-parametric bootstrap
+
+
+
+bootstrap.medians <- c()
+for (i in 1:1000) {
+random <- ceiling(runif(34, min=0, max=34))
+bootstrap.i <- FishDensity[random]
+bootstrap.medians[i] <- median(bootstrap.i)
+}
+bootstrap.medians
+
+
+
+```{r}
+bootstrap.medians <- c()
+for (i in 1:1000) {
+bootstrap.i <- sample(enviANDdensity$FishDensity..ind..1000m3., size=length(enviANDdensity$CopepodDensity.ind..m3.), replace=TRUE)
+bootstrap.medians[i] <- median(bootstrap.i)
+}
+bootstrap.medians
+```
+
+
+
+```{r}
+bootstrap.medians <- c()
+for (i in 1:1000) {
+bootstrap.i <- sample(enviANDdensity$FishDensity..ind..1000m3., size=length(enviANDdensity$CopepodDensity.ind..m3.), replace=TRUE)
+bootstrap.medians[i] <- median(bootstrap.i)
+}
+bootstrap.medians
+```
+
+```{r}
+bootstrap.medians.mean <- mean(bootstrap.medians)
+bootstrap.medians.mean
+```
+
+#### plot the histogram
+I plot the histogram of bootstrapped medians with bootstrap 1000 times. The black line is the mean of bootstrap medians. The blue line is the median of original sample. We can see that they are really close to each other. We can hardly see the black line because they are almost ar the same place.
+```{r}
+hist(bootstrap.medians)
+abline(v = FishDensity.median, col = "black", lwd = 2)
+abline(v = bootstrap.medians.mean, col = "blue", lwd = 2)
+```
+
+Compare the mean of bootstrap medians with the original sampling median.
+They are almost the same number, only that through doing bootstrap, our mean of bootstrap medians is closer to the original population median.
+```{r}
+FishDensity.median
+bootstrap.medians.mean
+```
+
+
+
+## 3. Plot fish (dependent) v.s copepod (independent) and the regression line. Compute the regression coefficients for
+fish = β0+β1*copepod and bootstrapped SE(β0) and SE(β1). Plot the histogram of bootstrapped β0 and β1 with bootstrap 1000 times.
+```{r}
+```
+
+
+
+
+repeat {
+ <- ceiling(runif(34, min=0, max=34))
+if (x == 6){
+break
+}
+}
+
+repeat
+ random = ceoling runif(34, min=0, max=34 )
+as.data.frame(rbind(xxx, [random]))
+apply # calculate mean by row
+
+
+sd
+standard error of the bootstrap mean
+
+fisfh cop 都要畫圖！
+
+
+unit results
+
+put originall sample into this  
+t(x) %*% x t(x) y
+
+
+use fynction
+
+
+
+
+
+A <- as.data.frame()
+repeat {
+ bootstrap <- ceiling(runif(34, min=0, max=34))
+ as.data.fram(rbind(A, [bootstrap]))
+ if (length(bootstrap) > 10){
+ break
+ }
+}
+
+A <- as.data.frame()
+
+as.data.frame(x, row.names = NULL, optional = FALSE, …)
+```{r}
+repeat{
+ bootstrap <- ceiling(runif(34, min=0, max=34))
+ A <- as.data.frame(rbind( ,[bootstrap]))
+ if (length(bootstrap) > 10){
+ break
+ }
+}
+```
+
+
+

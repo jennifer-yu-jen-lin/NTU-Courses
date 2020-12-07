@@ -1,0 +1,220 @@
+---
+title: "Homework 7"
+author: "Yu-Jen Lin"
+output:
+  html_document: default
+  pdf_document: default
+---
+#### b04b01036@ntu.edu.tw
+#### --------------------------------------------------------------------------------------------------------------------------------------------------------
+
+1. Use the “dominant” copepod species data (from HW1). Perform cluster analysis of stations based on percent composition data of the dominant species and tell your story about these copepod data.
+
+You can try to run the example analysis using the environmental data from HW3 to familiarize yourself with cluster analysis.
+
+– Try to determine the effects of different distance measures
+– Try to compare the results between different cluster algorithms
+– Determine final number of clusters and describe differences among them
+
+#### Set working directory
+```{r}
+setwd("~/R")
+```
+
+
+data = dominant[,-35]
+
+
+#### --------------------------------------------------------------------------------------------------------------------------------------------------------
+
+# Retrieve the dominant species from HW1
+```{r}
+dominant = read.csv('~/R/dominant.csv',row.names = 1,header=T)
+```
+
+```{r}
+install.packages("vegan")
+install.packages("cluster")
+install.packages("fpc")
+install.packages("TWIX") # 無法下載
+
+library(vegan)
+library(cluster) # needed
+library(fpc)
+library(TWIX)
+
+
+pkgs <- c("NbClust")
+install.packages("NbClust")
+library(NbClust)
+
+library(factoextra)
+```
+
+Distance method: euclidean
+##Conduct a Nonhierarchical Clustering (NHC)
+```{r}
+#standardize data
+data = t(dominant)
+data.std = scale(data)   # each column -> standardize (z score)
+
+plot(data.std)
+#compute distance matrix
+dist.euclidean = dist(data.std,method='euclidean')
+dist.maximum = dist(data.std,method='maximum')       # ?
+dist.manhattan = dist(data.std,method='manhattan')
+dist.canberra = dist(data.std,method='canberra')     # ?
+dist.binary = dist(data.std,method='binary')         # ?
+dist.minkowski = dist(data.std,method='minkowski')   # ?
+# manhattan/maximum = breakers?...
+
+
+#Determine number of clusters
+#### by maximizing the distance between cluster centers while minimizing the within-cluster variation
+#####Need to write a program for making scree plot and silhouette width
+
+k.euclidean <- c() # Within cluster sum
+for(i in 1:15){
+  km <- kmeans(dist.euclidean, centers = i, nstart = 25) # If centers is a number, how many random sets should be chosen? # minimizing
+  
+  # k means # 為了確定不同的分類，需要保證每個類分組總變異量之和最小
+  k.euclidean[i] <- km$tot.withinss # = sum(kmeans$withinss)
+}
+
+sil <- c()
+for(i in 2:15){ # silhouette of 1 cluster is NA, thus I start from 2 clusters
+  km <- kmeans(dist.euclidean, centers = i, nstart = 25) # If centers is a number, how many random sets should be chosen? # minimizing
+ 
+  # silhouette width 該主方法用於評估聚類結果的質量。如果一個聚類的結果比較好，那麼它的average silhouette就會比較高
+  ss = silhouette(km$cluster, dist(dist.euclidean)) # clusters >= 2
+  sil[i] = mean(ss[,3])
+}
+
+
+
+
+
+plot(k.euclidean, ylab="Total within groups sum of squares", xlab="Number of clusters (k)")
+# k=3這個點上，曲線的變化率比較大
+par(new = T)
+plot(1:15, sil, type='b', pch=19, frame=FALSE, xlab='Number of clusters k')
+abline(v=which.max(sil), lty=2)
+
+
+
+
+
+
+
+# 畫圖
+plot(1:k.max, sil, type='b', pch=19, frame=FALSE, xlab='Number of clusters k')
+abline(v=which.max(sil), lty=2)
+
+
+
+
+s.euclidean <- silhouette(integer(dist.euclidean)) # ? 
+
+silhouette(k.euclidean)
+
+
+data(dist.euclidean)
+pr4 <- pam(dist.euclidean, 4) # kmeans 不行, only pam hierarchical clustering
+silhouette(pr4)
+
+
+
+data(ruspini)
+pr4 <- pam(ruspini, 4) # kmeans 不行, only pam hierarchical clustering
+silhouette(pr4)
+
+比 silhouette  Non hi or hi
+
+#compute k-means NHC around 5 mediods (clusters)
+
+##  Partitioning Around Medoids
+### Partitioning (clustering) of the data into k clusters “around medoids”, a more robust version of K-means.
+y.pam = pam(dist.euclidean,k=5) 
+plot(y.pam)
+## Clustering Large Applications
+y.clara = clara(data.std,k=5) 
+plot(y.clara)
+
+summary(y.pam) # 內容Objective function:,Isolated clusters:
+
+#evaluate cluster stability
+y.eucl.boot = clusterboot(data.std, B=100, metric='euclidean', bootmethod=c('boot','subset'), clustermethod=claraCBI, usepam=TRUE, k=5, count=FALSE)
+print(y.eucl.boot)
+# ? plot(y.eucl.boot)
+```
+
+TEST
+```{r}
+# dist.euclidean
+sum.euclidean <- 0
+for (i in 1:11){
+sum.euclidean <- sum.euclidean + (data.std[1,i]-data.std[2,i])^2
+}
+sum.euclidean <- sum.euclidean ^ 0.5
+
+# dist.manhattan
+sum.manhattan <- 0
+for (i in 1:11){
+sum.manhattan <- sum.manhattan + abs(data.std[1,i]-data.std[2,i])
+}
+
+
+```
+
+
+##Conduct a Hierarchical Clustering (HC)
+```{r}
+
+y.eucl.ward = hclust(dist.euclidean,method='ward')  #two ways of doing HC
+y.eucl.ward = agnes(dist.euclidean,method='ward')
+y.eucl.dia = diana(dist.euclidean) # ? bottom-up preocess ?
+
+y.eucl.ward = hclust(dist.euclidean,method='ward')  #two ways of doing HC
+# "ward.D", 
+# "ward.D2",
+# "single", 
+# "complete",
+# "average" (= UPGMA), ######
+# "mcquitty" (= WPGMA), 
+# "median" (= WPGMC) or
+# "centroid" (= UPGMC)
+
+y.eucl.ward = agnes(dist.euclidean,method='ward')
+#  "average" ([unweighted pair-]group [arithMetic] average method, aka ‘UPGMA’), 
+# "single" (single linkage), 
+# "complete" (complete linkage), 
+#"ward" (Ward's method),
+#"weighted" (weighted average linkage, aka ‘WPGMA’), its generalization
+# "flexible" which uses (a constant version of) the Lance-Williams formula and the par.method argument, and
+# "gaverage" a generalized "average" aka “flexible UPGMA” method also using the Lance-Williams formula and par.method.
+y.eucl.dia = diana(dist.euclidean)
+
+
+
+
+#dendrogram
+plot(y.eucl.ward,main='Wards-linkage Dendrogram',xlab='Station',labels=data[,1])
+rect.hclust(y.eucl.ward,k=5) #cut by #clusters ?
+plot(y.eucl.ward,main='Wards-linkage Dendrogram',xlab='Station',labels=data[,1])
+rect.hclust(y.eucl.ward,h=5) #cut by height ?
+
+
+#######
+
+#aggolmerative coefficient
+summary(y.eucl.ave)$ac  # ave ?
+
+#cophenetic correlation
+cor(dist.euclidean,cophenetic(y.eucl.ave))
+plot(dist.euclidean,cophenetic(y.eucl.ave),xlab="Original distances",ylab="Cophenetic distances")
+
+```
+
+
+
+

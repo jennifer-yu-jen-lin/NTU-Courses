@@ -1,0 +1,152 @@
+---
+title: "Homework 9"
+author: "Yu-Jen Lin"
+output:
+  html_document: default
+  pdf_document: default
+---
+#### b04b01036@ntu.edu.tw
+#### --------------------------------------------------------------------------------------------------------------------------------------------------------
+
+#### 1. 1. Use the “dominant” copepod species data (from HW1).
+#### Apply PCA or MDS using matrix algebra to extract major gradients of the dominant species. Make a bi-plot to show the relationships among species and sites. Then, check your results with those from build-in functions of PCA, MDS, and NMDS.
+#### Hint: use SVD or eigen analysis of covariance matrix to find the eigen-values and vectors.
+
+#### 
+```{r}
+library(vegan)
+library(fields)
+library(scatterplot3d)
+library(ellipse)
+library(mgcv)
+library(akima)
+
+library(MASS) 
+```
+
+#### Retrieve the dominant species from HW1
+```{r}
+enviANDdensity <- read.csv("~/R/enviANDdensity.csv", row.names = 1, header=T)
+
+dominant = read.csv("~/R/dominant.csv",row.names = 1,header=T) # examples HW1
+data = t(dominant)
+data = data/sum(data) # get the propotion data
+
+#Drop some rare species 
+data = data[,-which(apply(data,2,sum)<0.03)] # In order not to let the following plots too complex, I choose only to retain around 1/4 original data. By doing so, I can only get 11 species to conduct the PCA.
+
+```
+
+# PCA
+```{r}
+gp <- c(rep(1,10),rep(2,15),rep(3,9)) # group the data by seasons
+
+# Conduct PCA
+pca <- prcomp(data, scale=T)   # scale -> normalize # If scale=T, a correlation matrix is used. otherwise: covariance matrix.
+pca$x   # PC scores
+# (another way to get the PC scores)
+z = scale(data)
+pca_2 <- z %*% pca$rotation  # PC scores
+
+screeplot(pca, type="l")   # determine how many PC to retain # I choose 2 PC to retain.
+
+# Check assumptions
+hist(data[, 1])   # Normality
+par(mfrow=c(1, 3))
+hist(pca$x[, 1])   # Use PC scores to check multivariate normality
+hist(pca$x[, 2])   
+hist(pca$x[, 3])   
+
+qqnorm(data[, 11])
+qqline(data[, 11])
+
+pairs(data[, 1:11])   # Linearity
+
+# In PCA, it didn't meet all the assumptions. Professor mentioned in the class that because our data consists too many zeros, it is not suitable to use euclidean distance (PCA). Nevertheless, we can still try to finish the folllowing steps to explore how to use PCA. 
+
+```
+
+## Many plotting functions
+```{r}
+# rda
+rda = rda(data, scale=T)  
+biplot(pca,choices=c(1,2),col=c('blue','red'),cex=c(.8,1))
+ordiplot(rda,choices=c(1,2),type='text',scaling=2)
+
+#fitting vectors
+p = ordiplot(rda,choices=c(1,2),display='sites')
+ef = envfit(rda,enviANDdensity,permu=1000,choices=c(1,2))
+ef # We can see that almost all the environmental variables are significant. Only Fluorescence and maxF are not significant.
+plot(ef,p.max=0.1)
+```
+#### --------------------------------------------------------------------------------------------------------------------------------------------------------
+## Check the results with those from build-in functions of PCA, MDS, and NMDS.
+
+# CA
+```{r}
+ca <- cca(data)
+ca
+
+chisq.test(data/sum(data))   #Chi-squared stats of standardized data = total inertia
+ca$CA$eig    #eigenvalues
+
+ca$CA$u[,1:3]    #sample eigenvectors (‘u’) 
+ca$CA$v[,1:3]    #species eigenvectors (‘v’)
+
+ca$CA$u.eig[1:3] #scaled sample eigenvectors (‘u’) #normalized eigenvectors
+ca$CA$v.eig[1:3] #scaled species eigenvectors (‘v’) #normalized eigenvectors
+
+
+ordiplot(ca, choices=c(1,2), type='text', scaling=2) #choices: 2 dimensions
+```
+
+# DCA
+```{r}
+dca = decorana(data)   # detrended correspondence analysis 
+dca #print results
+
+dca = decorana(data, iweigh=1)  # downweighting rare species 
+dca  # print new results 
+
+dca$evals #to print eigenvalues 
+dca$rproj #to print sample scores 
+dca$cproj #to print species scores 
+
+summary(dca,axes=3) #summary of eigenvalues and scaled scores 
+
+ordiplot(dca)  # ordination plot 
+text(dca, display='species', labels=names(dca$adotj), cex=0.7, pos=1, col=2)
+text(dca, display='sites', labels=names(dca$aidot), cex=0.7,pos=1)
+```
+# MDS
+I try to use two kinds of distance methods to do the MDS. No mater which method I use, we can all clearly see that the stations are well grouped into 3 clusters (spring, summer and winter).
+```{r}
+dist.manhattan <- dist(data, method='manhattan')
+mds_manhattan <- cmdscale(dist.manhattan)
+plot(mds_manhattan, xlab="MDS1", ylab="MDS2", col=c(rep("pink",10),rep("orange",15),rep("lightblue",9)))
+text(mds_manhattan, labels=rownames(data), pos=1, cex=0.6, col=c(rep("pink",10),rep("orange",15),rep("lightblue",9)), main="MDS_manhattan")
+legend("topright", legend=c("Spring", "Summer", "Winter"), text.col=c("pink","orange","lightblue"), cex=0.6)
+
+dist.minkowski <- dist(data, method='minkowski')
+mds_minkowski <- cmdscale(dist.minkowski)
+plot(mds_minkowski, xlab="MDS1", ylab="MDS2", col=c(rep("pink",10),rep("orange",15),rep("lightblue",9)), main="MDS_minkowski")
+text(mds_minkowski, labels=rownames(data), pos=1, cex=0.6,  col=c(rep("pink",10),rep("orange",15),rep("lightblue",9)))
+legend("topright", legend=c("Spring", "Summer", "Winter"), text.col=c("pink","orange","lightblue"), cex=0.6)
+```
+
+# NMDS
+```{r}
+nmds <- metaMDS(data, distance='bray', k=3, trymax=50, autotransform=F)
+stressplot(nmds)   # Shepard plot
+
+nmds$points 
+nmds$species
+
+ordiplot(nmds)
+ordiplot(nmds, type='text')
+```
+
+#### No mater which method we use, we all can get similar results. This means that all these methods can work and they were just using different aspects to solve the problems.
+
+
+

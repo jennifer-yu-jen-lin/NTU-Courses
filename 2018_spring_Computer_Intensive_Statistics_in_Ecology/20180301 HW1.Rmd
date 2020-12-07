@@ -1,0 +1,90 @@
+---
+title: "Homework 1"
+author: "Yu-Jen Lin"
+output:
+  html_document: default
+  pdf_document: default
+---
+#### b04b01036@ntu.edu.tw
+#### --------------------------------------------------------------------------------------------------------------------------------------------------------
+
+#### read the data
+First, I have to read the data in R. Thus, I use “read.table” function to read the txt file. The "header=T" means I set the first row as header. On the other hand, the "header=F" means that first row is not a header.
+```{r}
+composition <- read.table("~/R/copepod_composition.txt", header=T)
+head(composition)
+density <- read.table("~/R/cop_density.txt", header=F)
+head(density)
+```
+
+## 1. Calculate the copepod density for each species for each cruise-station
+
+#### transpose
+First, in order to make these two dataset multipliable ("composition" and "density"), I do the matrix transpose on the "desity".
+```{r}
+density.t <- t(density)
+```
+
+#### copepod density
+Second, I calculate the copepod density by mutiply "density.t" and "composition", and then mutiply 0.01 to make "composition" become a porpotion.
+```{r}
+density.each <- density.t*composition*0.01
+head(density.each)
+```
+
+## 2. For each cruise-station, calculate the species richness (number of species) and Shannon diversity index
+
+#### species richness (number of species)
+First, I create "density.each.zero" to  distinguish items larger than 0 from the others items. If the items are larger than 0, which means that species does exist in that cruise-station. 
+```{r}
+density.each.zero <- density.each>0
+head(density.each.zero)
+```
+
+Second, when I use "apply" to do the FUN (function) by each column (MARGIN=2), I can count the items that are larger than 0 by summing up the "density.each.zero" by row ("True" stands for 1). And then correct it by minus 1.
+```{r}
+species.number <- apply(density.each.zero, MARGIN=2, FUN = sum)
+species.number
+species.number.correction <- species.number-1
+species.number.correction
+```
+
+#### Shannon diversity index
+First, I sum up all the density in "density.each" in order to know the total amount of all the species. It's like we assume there's only 1 cubic meter of the sumation of all cruise-stations, and to see the propotion of each species in this 1 cubic meter("density.propotion").
+```{r}
+density.sum <- sum(density.each)
+density.propotion <- density.each/density.sum
+head(density.propotion)
+```
+Second, I mutiply the pi (proportion of individuals belonging to the ith species (wikipedia) ) by log pi, to get the Shannon diversity index for each species. After that, I can easily do the calculation of the real Shannon diversity index. In these process, I do the sumation, use "na.rm=TRUE" to let r not to sum the NAs. Also, I multiply Shannon.sum by -1 because it's in the equation of Shannon diversity index.
+```{r}
+Shannon <- density.propotion*log(density.propotion)
+Shannon.sum <- apply(Shannon, MARGIN=2, FUN = sum, na.rm=TRUE)
+Shannon.sum.positive <- Shannon.sum*-1
+Shannon.sum.positive
+```
+
+## 3. Find dominant species (species >=2% of total composition in any cruise-station) and calculate the average density for the spring, summer, and winter cruise for each dominant species.
+
+#### dominant species
+First, I sum up all the propotion in every station ("MARGIN=1" = by row) for each species, and add this vector to the table that contains the density of each species for each cruise-station.
+```{r}
+density.propotion.sum <- apply(density.propotion, MARGIN=1, FUN = sum) # species sum
+density.each.propotion.sum.add <- cbind(density.each,density.propotion.sum)
+head(density.each.propotion.sum.add)
+```
+Second, I pick up the rows that species >=2%.
+```{r}
+dominant <- subset(density.each.propotion.sum.add, density.propotion.sum >= 0.02, select=c(1:35))
+```
+Third, I do the sumation for each species in each season. Eventually, use "avg" table to show the results.
+```{r}
+springsum <- apply(dominant, MARGIN=1, FUN = sum, select=c(1:10) )
+springavg <- springsum/10
+summersum <- apply(dominant, MARGIN=1, FUN = sum, select=c(11:25) )
+summeravg <- summersum/15
+wintersum <- apply(dominant, MARGIN=1, FUN = sum, select=c(26:34) )
+winteravg <- wintersum/9
+avg <- cbind(springavg, summeravg, winteravg)
+avg
+```

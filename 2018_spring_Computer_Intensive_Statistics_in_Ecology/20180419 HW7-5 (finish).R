@@ -1,0 +1,371 @@
+
+#### "Homework 7"
+#### "Yu-Jen Lin"
+#### b04b01036@ntu.edu.tw
+#### --------------------------------------------------------------------------------------------------------------------------------------------------------
+
+#### 1. Use the “dominant” copepod species data (from HW1). Perform cluster analysis of stations based on percent composition data of the dominant species and tell your story about these copepod data.You can try to run the example analysis using the environmental data from HW3 to familiarize yourself with cluster analysis.
+
+###### – Try to determine the effects of different distance measures
+###### – Try to compare the results between different cluster algorithms
+###### – Determine final number of clusters and describe differences among them
+
+#### --------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+#### Retrieve the dominant species from HW1
+
+dominant = read.csv("~/R/dominant_HW1.csv",row.names = 1,header=T) # examples HW1
+
+
+#### Installing packages
+
+# install.packages("vegan")
+# install.packages("cluster")
+# install.packages("fpc")
+# install.packages('ggfortify')
+
+library(ggfortify)
+library(vegan)
+library(cluster) 
+library(fpc)
+library(ggfortify)
+
+
+## Distance
+
+#standardize data
+data = t(dominant)
+data.std = scale(data)   # each column -> standardize (z score) by columns
+
+#compute distance matrix
+dist.euclidean = dist(data.std,method='euclidean')
+dist.maximum = dist(data.std,method='maximum')      
+dist.manhattan = dist(data.std,method='manhattan')
+dist.canberra = dist(data.std,method='canberra')    
+dist.binary = dist(data.std,method='binary')         
+dist.minkowski = dist(data.std,method='minkowski')   
+dist.bray_curtis  = dist.manhattan / dist.maximum # Though there's no direct methods we can use in dist function, we can still build one to calculate the bray_curtis distance matrix.
+
+
+#### --------------------------------------------------------------------------------------------------------------------------------------------------------
+
+# Conduct a Nonhierarchical Clustering (NHC)
+
+#### --------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## Try to determine the effects of different distance measures
+#### Distance method 1/6 : euclidean 
+
+dist.METHOD = dist.euclidean
+
+# Determine number of clusters
+## by maximizing the distance between cluster centers while minimizing the within-cluster variation
+## Need to write a program for making scree plot and silhouette width
+
+km.result <- c() # Total within groups sum of squares
+for(i in 1:15){
+  km <- kmeans(dist.METHOD, centers = i, nstart = 25) # nstart: random sets that should be chosen # minimizing km
+  
+  # minimize k means # total within groups sum of squares
+  km.result[i] <- km$tot.withinss # = sum(kmeans$withinss)
+}
+sil.result <- c()
+for(i in 2:15){ # silhouette of 1 cluster is NA, thus I start from 2 clusters
+  km <- kmeans(dist.METHOD, centers = i, nstart = 25) # nstart: random sets that should be chosen # minimizing km
+  
+  # silhouette width # maximize average silhouette
+  ss = silhouette(km$cluster, dist(dist.METHOD)) # clusters >= 2
+  sil.result[i] = mean(ss[,3])
+}
+
+# RESULTS
+km.result.euclidean <- km.result
+sil.result.euclidean <- sil.result
+
+
+#### Distance method 2/6 : maximum
+
+dist.METHOD = dist.maximum
+
+# Determine number of clusters
+## by maximizing the distance between cluster centers while minimizing the within-cluster variation
+## Need to write a program for making scree plot and silhouette width
+
+km.result <- c() # Within cluster sum
+for(i in 1:15){
+  km <- kmeans(dist.METHOD, centers = i, nstart = 25) # nstart: random sets that should be chosen # minimizing km
+  
+  # minimize k means # total within groups sum of squares
+  km.result[i] <- km$tot.withinss # = sum(kmeans$withinss)
+}
+sil.result <- c()
+for(i in 2:15){ # silhouette of 1 cluster is NA, thus I start from 2 clusters
+  km <- kmeans(dist.METHOD, centers = i, nstart = 25) # nstart: random sets that should be chosen # minimizing km
+  
+  # silhouette width # maximize average silhouette
+  ss = silhouette(km$cluster, dist(dist.METHOD)) # clusters >= 2
+  sil.result[i] = mean(ss[,3])
+}
+
+# RESULTS
+km.result.maximum <- km.result
+sil.result.maximum <- sil.result
+
+
+#### Distance method 3/6 : manhattan
+
+dist.METHOD = dist.manhattan
+
+# Determine number of clusters
+## by maximizing the distance between cluster centers while minimizing the within-cluster variation
+## Need to write a program for making scree plot and silhouette width
+
+km.result <- c() # Within cluster sum
+for(i in 1:15){
+  km <- kmeans(dist.METHOD, centers = i, nstart = 25) # nstart: random sets that should be chosen # minimizing km
+  
+  # minimize k means # total within groups sum of squares
+  km.result[i] <- km$tot.withinss # = sum(kmeans$withinss)
+}
+sil.result <- c()
+for(i in 2:15){ # silhouette of 1 cluster is NA, thus I start from 2 clusters
+  km <- kmeans(dist.METHOD, centers = i, nstart = 25) # nstart: random sets that should be chosen # minimizing km
+  
+  # silhouette width # maximize average silhouette
+  ss = silhouette(km$cluster, dist(dist.METHOD)) # clusters >= 2
+  sil.result[i] = mean(ss[,3])
+}
+
+# RESULTS
+km.result.manhattan <- km.result
+sil.result.manhattan <- sil.result
+
+
+#### Distance method 4/6 : canberra
+
+dist.METHOD = dist.canberra
+
+# Determine number of clusters
+## by maximizing the distance between cluster centers while minimizing the within-cluster variation
+## Need to write a program for making scree plot and silhouette width
+
+km.result <- c() # Within cluster sum
+for(i in 1:15){
+  km <- kmeans(dist.METHOD, centers = i, nstart = 25) # nstart: random sets that should be chosen # minimizing km
+  
+  # minimize k means # total within groups sum of squares
+  km.result[i] <- km$tot.withinss # = sum(kmeans$withinss)
+}
+sil.result <- c()
+for(i in 2:15){ # silhouette of 1 cluster is NA, thus I start from 2 clusters
+  km <- kmeans(dist.METHOD, centers = i, nstart = 25) # nstart: random sets that should be chosen # minimizing km
+  
+  # silhouette width # maximize average silhouette
+  ss = silhouette(km$cluster, dist(dist.METHOD)) # clusters >= 2
+  sil.result[i] = mean(ss[,3])
+}
+
+# RESULTS
+km.result.canberra <- km.result
+sil.result.canberra <- sil.result
+
+
+#### Distance method 5/6 : minkowski
+
+dist.METHOD = dist.minkowski
+
+# Determine number of clusters
+## by maximizing the distance between cluster centers while minimizing the within-cluster variation
+## Need to write a program for making scree plot and silhouette width
+
+km.result <- c() # Within cluster sum
+for(i in 1:15){
+  km <- kmeans(dist.METHOD, centers = i, nstart = 25) # nstart: random sets that should be chosen # minimizing km
+  
+  # minimize k means # total within groups sum of squares
+  km.result[i] <- km$tot.withinss # = sum(kmeans$withinss)
+}
+sil.result <- c()
+for(i in 2:15){ # silhouette of 1 cluster is NA, thus I start from 2 clusters
+  km <- kmeans(dist.METHOD, centers = i, nstart = 25) # nstart: random sets that should be chosen # minimizing km
+  
+  # silhouette width # maximize average silhouette
+  ss = silhouette(km$cluster, dist(dist.METHOD)) # clusters >= 2
+  sil.result[i] = mean(ss[,3])
+}
+
+# RESULTS
+km.result.minkowski <- km.result
+sil.result.minkowski <- sil.result
+
+
+#### Distance method 6/6 : bray_curtis
+
+dist.METHOD = dist.bray_curtis
+
+# Determine number of clusters
+## by maximizing the distance between cluster centers while minimizing the within-cluster variation
+## Need to write a program for making scree plot and silhouette width
+
+km.result <- c() # Within cluster sum
+for(i in 1:15){
+  km <- kmeans(dist.METHOD, centers = i, nstart = 25) # nstart: random sets that should be chosen # minimizing km
+  
+  # minimize k means # total within groups sum of squares
+  km.result[i] <- km$tot.withinss # = sum(kmeans$withinss)
+}
+sil.result <- c()
+for(i in 2:15){ # silhouette of 1 cluster is NA, thus I start from 2 clusters
+  km <- kmeans(dist.METHOD, centers = i, nstart = 25) # nstart: random sets that should be chosen # minimizing km
+  
+  # silhouette width # maximize average silhouette
+  ss = silhouette(km$cluster, dist(dist.METHOD)) # clusters >= 2
+  sil.result[i] = mean(ss[,3])
+}
+
+# RESULTS
+km.result.bray_curtis <- km.result
+sil.result.bray_curtis <- sil.result
+
+
+## Determine how many clusters 
+
+plot(km.result.euclidean, main="Distance method: euclidean", type='b', col="black", ylab="Total within groups sum of squares", xlab="Number of clusters k")
+par(new = T)
+plot(1:15, sil.result.euclidean, type='b', pch=19, frame=FALSE, ylab='', xlab='', axes=F, col="blue")
+axis(side = 4, col="blue")
+mtext(side = 4, line = 2, text="Average silhouette widths",col="blue")
+abline(v=which.max(sil.result.euclidean), lty=2, col="blue")
+legend("topright", c("km","sil"), col=c("black","blue"), lty=1)
+
+plot(km.result.maximum, main="Distance method: maximum", type='b', col="black", ylab="Total within groups sum of squares", xlab="Number of clusters k")
+par(new = T)
+plot(1:15, sil.result.maximum, type='b', pch=19, frame=FALSE, ylab='', xlab='', axes=F, col="blue")
+axis(side = 4, col="blue")
+mtext(side = 4, line = 2, text="Average silhouette widths",col="blue")
+abline(v=which.max(sil.result.maximum), lty=2, col="blue")
+legend("topright", c("km","sil"), col=c("black","blue"), lty=1)
+
+plot(km.result.manhattan, main="Distance method: manhattan", type='b', col="black", ylab="Total within groups sum of squares", xlab="Number of clusters k")
+par(new = T)
+plot(1:15, sil.result.manhattan, type='b', pch=19, frame=FALSE, ylab='', xlab='', axes=F, col="blue")
+axis(side = 4, col="blue")
+mtext(side = 4, line = 2, text="Average silhouette widths",col="blue")
+abline(v=which.max(sil.result.manhattan), lty=2, col="blue")
+legend("topright", c("km","sil"), col=c("black","blue"), lty=1)
+
+plot(km.result.canberra, main="Distance method: canberra", type='b', col="black", ylab="Total within groups sum of squares", xlab="Number of clusters k")
+par(new = T)
+plot(1:15, sil.result.canberra, type='b', pch=19, frame=FALSE, ylab='', xlab='', axes=F, col="blue")
+axis(side = 4, col="blue")
+mtext(side = 4, line = 2, text="Average silhouette widths",col="blue")
+abline(v=which.max(sil.result.canberra), lty=2, col="blue")
+legend("topright", c("km","sil"), col=c("black","blue"), lty=1)
+
+plot(km.result.minkowski, main="Distance method: minkowski", type='b', col="black", ylab="Total within groups sum of squares", xlab="Number of clusters k")
+par(new = T)
+plot(1:15, sil.result.minkowski, type='b', pch=19, frame=FALSE, ylab='', xlab='', axes=F, col="blue")
+axis(side = 4, col="blue")
+mtext(side = 4, line = 2, text="Average silhouette widths",col="blue")
+abline(v=which.max(sil.result.minkowski), lty=2, col="blue")
+legend("topright", c("km","sil"), col=c("black","blue"), lty=1)
+
+plot(km.result.bray_curtis, main="Distance method: bray_curtis", type='b', col="black", ylab="Total within groups sum of squares", xlab="Number of clusters k")
+par(new = T)
+plot(1:15, sil.result.bray_curtis, type='b', pch=19, frame=FALSE, ylab='', xlab='', axes=F, col="blue")
+axis(side = 4, col="blue")
+mtext(side = 4, line = 2, text="Average silhouette widths",col="blue")
+abline(v=which.max(sil.result.bray_curtis), lty=2, col="blue")
+legend("topright", c("km","sil"), col=c("black","blue"), lty=1)
+
+
+
+## Choose k=2 and plot the results
+# In last step, most of the result graphs show that k=2 has the highest silhouette widths. Thus, I choose k=2 to do futher clustering.
+
+#compute k-means NHC around 2 mediods (clusters)
+
+##  Partitioning Around Medoids / Partitioning (clustering) of the data into k clusters “around medoids”, a more robust version of K-means.
+dist.METHOD <- dist.euclidean
+y.pam = pam(dist.METHOD,k=2) 
+plot(y.pam)
+summary(y.pam) # 內容Objective function:,Isolated clusters:
+
+## Clustering Large Applications
+y.clara = clara(data.std,k=2, metric="euclidean") 
+
+autoplot(prcomp(data.std), data = data.std, colour=y.pam$clustering,label=T, shape=F) 
+
+#evaluate cluster stability
+y.eucl.boot = clusterboot(data.std, B=100, metric='euclidean', bootmethod=c('boot','subset'), clustermethod=claraCBI, usepam=TRUE, k=2, count=FALSE)
+print(y.eucl.boot) # dissolved < 0.5, recovered > 0.75 
+
+
+#### --------------------------------------------------------------------------------------------------------------------------------------------------------
+
+# Conduct a Hierarchical Clustering (HC)
+
+#### --------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## Various hierarchical joining algorithms
+
+dist.METHOD = dist.euclidean # in this part, I only show the results of using euclidean method.
+
+## 1. bottom-up -> Hierarchical Clustering
+y.eucl.hclust.ward.D = hclust(dist.METHOD,method='ward.D') 
+y.eucl.hclust.ward.D2 = hclust(dist.METHOD,method='ward.D2') 
+y.eucl.hclust.single = hclust(dist.METHOD,method='single') 
+y.eucl.hclust.complete = hclust(dist.METHOD,method='complete') 
+y.eucl.hclust.average = hclust(dist.METHOD,method='average') # = UPGMA 
+y.eucl.hclust.mcquitty = hclust(dist.METHOD,method='mcquitty') # = WPGMA
+y.eucl.hclust.median = hclust(dist.METHOD,method='median') # = WPGMC
+y.eucl.hclust.centroid = hclust(dist.METHOD,method='centroid') # = UPGMC
+
+## 2. bottom-up 2/2 -> Agglomerative Nesting (Hierarchical Clustering)
+y.eucl.agnes.ward = agnes(dist.METHOD,method="ward") # (Ward's method),
+y.eucl.agnes.average = agnes(dist.METHOD,method="average") # ([unweighted pair-]group [arithMetic] average method, aka ‘UPGMA’), 
+y.eucl.agnes.single = agnes(dist.METHOD,method="single") # (single linkage), 
+y.eucl.agnes.complete = agnes(dist.METHOD,method="complete") #  (complete linkage), 
+y.eucl.agnes.weighted = agnes(dist.METHOD,method="weighted") # (weighted average linkage, aka ‘WPGMA’), its generalization
+y.eucl.agnes.gaverage = agnes(dist.METHOD,method="gaverage") # a generalized "average" aka “flexible UPGMA” method also using the Lance-Williams formula and par.method.
+
+## 3. top-down -> DIvisive ANAlysis Clustering
+y.eucl.diana = diana(dist.METHOD)
+
+
+
+
+## Dendrogram / When k=2:
+# Most of the clustering results show that data collected in the same season are more prone to be group together. Summer data almost form one group. And spring and winter stay in one group. As a result, it might imply that the species composotions in summer is quite different from the other two.
+
+names<-c("p1","p3","p4","p6","p13","p16","p19","p21","p23","p25","s18","s19","s20","s22","s23","s25","s27","s29","sA","sB","sC","sD","sE","sF","sG","w22","w23","w25","w27","w29","wA","wB","wC","wD")
+
+## 1. bottom-up -> Hierarchical Clustering
+plot(y.eucl.hclust.ward.D,main='hclust.ward.D',xlab='Station',labels=names)
+rect.hclust(y.eucl.hclust.ward.D,k=2) #cut by #clusters
+
+## 2. bottom-up 2/2 -> Agglomerative Nesting (Hierarchical Clustering)
+plot(y.eucl.agnes.ward,main='agnes.ward',xlab='Station',labels=names)
+rect.hclust(y.eucl.agnes.ward,k=2) #cut by #clusters
+
+## 3. top-down -> DIvisive ANAlysis Clustering
+plot(y.eucl.diana,main='diana',xlab='Station',labels=names)
+rect.hclust(y.eucl.diana,k=2) #cut by #clusters
+
+
+## Dendrogram / When k=3:
+# I already know that these data were collected from 3 different seasons,as a consequence, I try to cluster them into 3 groups. The results in "hclust.ward.D" show a perfect grouping that precisely seperate the data from 3 different seasons. As for "agnes.ward", it is almost the same as "hclust.ward.D".
+
+## 1. bottom-up -> Hierarchical Clustering
+plot(y.eucl.hclust.ward.D,main='hclust.ward.D',xlab='Station',labels=names)
+rect.hclust(y.eucl.hclust.ward.D,k=3) #cut by #clusters
+
+## 2. bottom-up 2/2 -> Agglomerative Nesting (Hierarchical Clustering)
+plot(y.eucl.agnes.ward,main='agnes.ward',xlab='Station',labels=names)
+rect.hclust(y.eucl.agnes.ward,k=3) #cut by #clusters
+
+## 3. top-down -> DIvisive ANAlysis Clustering
+plot(y.eucl.diana,main='diana',xlab='Station',labels=names)
+rect.hclust(y.eucl.diana,k=3) #cut by #clusters
+

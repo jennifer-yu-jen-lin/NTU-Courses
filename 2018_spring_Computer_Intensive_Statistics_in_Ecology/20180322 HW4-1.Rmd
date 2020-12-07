@@ -1,0 +1,240 @@
+---
+title: "Homework 4"
+author: "Yu-Jen Lin"
+output:
+  html_document: default
+  pdf_document: default
+---
+#### b04b01036@ntu.edu.tw
+#### --------------------------------------------------------------------------------------------------------------------------------------------------------
+
+#### Set working directory
+```{r}
+setwd("~/R")
+```
+
+#### Read enviANDdensity.csv into R
+```{r}
+enviANDdensity <- read.csv(file="~/R/enviANDdensity.csv", header=TRUE)
+```
+
+Because we only need the data in "FishDensity..ind..1000m3." and "CopepodDensity.ind..m3.", I take these two columns out and set as "FishDensity" and "CopepodDensity" separately.
+```{r}
+FishDensity <- enviANDdensity$FishDensity..ind..1000m3.
+CopepodDensity <- enviANDdensity$CopepodDensity.ind..m3.
+```
+
+#### Re-do HW3 [Normal theory] mean and SE(mean)
+```{r}
+FishDensity.mean <- mean(FishDensity)
+FishDensity.mean
+FishDensity.SE <- var(FishDensity)^0.5/length(FishDensity)^0.5
+FishDensity.SE
+CopepodDensity.mean <- mean(CopepodDensity)
+CopepodDensity.mean
+CopepodDensity.SE <- var(CopepodDensity)^0.5/length(CopepodDensity)^0.5
+CopepodDensity.SE
+```
+
+
+###### -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+#### 1. Compute the mean and stand error of the mean for the fish and copepod density (all data points) respectively using Jackknife. Plot the histogram of Jackknife means.
+
+#### [Jackknife] mean and stand error of the mean
+(1) FishDensity
+```{r}
+FishDensity.Jackknife.means <- c() # set a vector to put the following sampling results
+
+for (i in 1:length(FishDensity)) {
+FishDensity.Jackknife.i <- FishDensity[-i] # single sampling result
+FishDensity.Jackknife.means[i] <- mean(FishDensity.Jackknife.i) # put every mean of every single result into the vector I've created
+}
+
+FishDensity.Jackknife.means.mean <- mean(FishDensity.Jackknife.means) # mean of Jackknife means
+FishDensity.Jackknife.means.mean
+FishDensity.Jackknife.means.SE <- (var(FishDensity.Jackknife.means))^0.5
+FishDensity.Jackknife.means.SE
+```
+
+(2) CopepodDensity
+```{r}
+CopepodDensity.Jackknife.means <- c() # set a vector to put the following sampling results
+
+for (i in 1:length(CopepodDensity)) {
+CopepodDensity.Jackknife.i <- CopepodDensity[-i] # single sampling result
+CopepodDensity.Jackknife.means[i] <- mean(CopepodDensity.Jackknife.i) # put every mean of every single result into the vector I've created
+}
+
+CopepodDensity.Jackknife.means.mean <- mean(CopepodDensity.Jackknife.means) # mean of Jackknife means
+CopepodDensity.Jackknife.means.mean
+CopepodDensity.Jackknife.means.SE <- var(CopepodDensity.Jackknife.means)^0.5
+CopepodDensity.Jackknife.means.SE
+```
+
+#### plot the histogram
+I plot the histogram of Jackknifeped means with Jackknife 1000 times. The black line is the mean of Jackknife means. The blue line is the mean of original sampling. We can see that they are really close to each other. 
+When we compare histogram of Jackknife with bootstrap, we find bootstrap results are more likely to form a normal distribution because the sample size is far larger than Jackknife.
+
+(1) FishDensity means by [Jackknife](black) or [Normal Theory](blue)
+```{r}
+hist(FishDensity.Jackknife.means)
+abline(v = FishDensity.mean, col = "black", lwd = 2)
+abline(v = FishDensity.Jackknife.means.mean, col = "blue", lwd = 2)
+```
+
+(2) CopepodDensity means by [Jackknife](black) or [Normal Theory](blue)
+```{r}
+hist(CopepodDensity.Jackknife.means)
+abline(v = CopepodDensity.mean, col = "black", lwd = 2)
+abline(v = CopepodDensity.Jackknife.means.mean, col = "blue", lwd = 2)
+```
+
+###### -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+#### 2. Compute the regression coefficients for
+#### fish = β0+β1*copepod and Jackknife SE of β0 and β1.
+#### Plot the histogram of Jackknife β0 and β1.
+
+
+#### Compute the regression coefficients for 
+#### fish(y) = β0 + β1 * copepod(x).
+  Dimension of y  -> (n,1)
+  Dimension of β0 -> (n,1)
+  Dimension of β1 -> (k+1,1)
+  Dimension of X  -> (n,k+1)
+```{r}
+n <- length(FishDensity)
+k <- 1
+
+y  <- matrix(FishDensity, nrow=n, ncol=1, byrow = TRUE) # put the original sample into y
+x  <- matrix(c(rep(1, times=n),CopepodDensity), nrow=n, ncol=k+1, byrow = FALSE)  # put the original sample into x
+
+β1 <- solve(t(x) %*% x) %*% t(x) %*% y
+β1
+β0 <- y - x %*% β1  # fish(y) = β0 + β1 * copepod(x)
+```
+Thus, through β1, I found the intercept of the regression line is 93.0647 and the slope of the regression line is 0.1163.
+y = 93.0647 + 0.1163*x
+
+#### Plot fish (dependent) v.s. copepod (independent) and the regression line.
+I plot the regression line I just computed in below. (blue) y = 93.0647 + 0.1163*x
+```{r}
+plot(CopepodDensity, FishDensity, main="Fish v.s. Copepod", 
+  	xlab="Copepod Density (/m3) ", ylab="Fish Density (/1000m3) ", pch=19)
+abline(a=93.0647, b=0.1163, col="blue") # regression line (y~x) # the regression line I computed in previous step, a=intercept b=slope
+```
+
+
+
+
+#### Jackknife SE(β0) and SE(β1).
+```{r}
+# set vectors to put the following sampling results
+Jackknife.β0 <- c() 
+Jackknife.β1 <- c()
+
+# set starting points
+n.bt <- length(FishDensity)-1
+k.bt <- length(FishDensity) 
+
+# Jackknife
+for (i in 1:k.bt) {
+Jackknife.Fish.i <- FishDensity[-i] # single sampling result
+Jackknife.Copepod.i <- CopepodDensity[-i] # single sampling result
+
+y.bt  <- matrix(Jackknife.Fish.i, nrow=n.bt, ncol=1, byrow = FALSE) # put the Jackknife sample into y.bt
+x.bt  <- cbind(c(rep(1, times=n.bt)), as.matrix(Jackknife.Copepod.i)) # combine the new column into the x.bt
+
+β1.bt <- solve(t(x.bt) %*% x.bt) %*% t(x.bt) %*% y.bt
+Jackknife.β0[i] <- β1.bt[1] # intercept
+Jackknife.β1[i] <- β1.bt[2] # slope
+}
+
+Jackknife.β0 <- append(Jackknife.β0, β1.bt[1]) # add the SE(β0) calculated by normal theory (total:1000)
+Jackknife.β1 <- append(Jackknife.β1, β1.bt[2]) # add the SE(β1) calculated by normal theory (total:1000)
+
+Jackknife.β0.SE <- var(Jackknife.β0)^0.5
+Jackknife.β0.SE
+Jackknife.β1.SE <- var(Jackknife.β1)^0.5
+Jackknife.β1.SE
+
+
+```
+
+
+
+#### Plot the histogram of Jackknife β0 and β1.
+Jackknife β0
+```{r}
+hist(Jackknife.β0)
+```
+
+Jackknife β1
+```{r}
+hist(Jackknife.β0)
+```
+
+
+
+
+
+
+
+
+###### -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+#### Re-do HW3 [bootstrap] mean and SE(mean)
+(1) FishDensity bootstrap means
+```{r}
+FishDensity.bootstrap.means <- c() # set a vector to put the following sampling results
+for (i in 1:1000) {
+random <- ceiling(runif(34, min=0, max=34))
+bootstrap.i <- FishDensity[random] # single sampling result
+FishDensity.bootstrap.means[i] <- mean(bootstrap.i) # put every mean of every single result into the vector I've created
+}
+FishDensity.bootstrap.means <- append(FishDensity.bootstrap.means, FishDensity.mean) # add the mean calculated by normal theory (total:1001)
+FishDensity.bootstrap.means.mean <- mean(FishDensity.bootstrap.means) # mean of bootstrap means
+FishDensity.bootstrap.means.mean
+FishDensity.bootstrap.means.SE <- var(FishDensity.bootstrap.means)^0.5
+FishDensity.bootstrap.means.SE
+```
+
+(2) CopepodDensity bootstrap means
+```{r}
+CopepodDensity.bootstrap.means <- c() # set a vector to put the following sampling results
+for (i in 1:1000) {
+random <- ceiling(runif(34, min=0, max=34))
+bootstrap.i <- CopepodDensity[random] # single sampling result
+CopepodDensity.bootstrap.means[i] <- mean(bootstrap.i) # put every mean of every single result into the vector I've created
+}
+CopepodDensity.bootstrap.means <- append(CopepodDensity.bootstrap.means, CopepodDensity.mean) # add the mean calculated by normal theory (total:1001)
+CopepodDensity.bootstrap.means.mean <- mean(CopepodDensity.bootstrap.means) # mean of bootstrap means
+CopepodDensity.bootstrap.means.mean
+CopepodDensity.bootstrap.means.SE <- var(CopepodDensity.bootstrap.means)^0.5
+CopepodDensity.bootstrap.means.SE
+```
+
+
+
+
+#### 3. Compare the estimates for Q1 and Q2 obtained from normal theory, bootstrap, and jackknife.
+
+The results of normal theory and jackknife are the same because of the way jackknife sampling.
+The results of bootstrap is slightly different from normal theory and jackknife. Yet, to some extent, these three are still quite similar.
+```{r}
+Fish.normal <- c(FishDensity.mean, FishDensity.SE)
+Fish.Bootstrap <- c(FishDensity.bootstrap.means.mean, FishDensity.bootstrap.means.SE)
+Fish.Jackknife <- c(FishDensity.Jackknife.means.mean, FishDensity.Jackknife.means.SE)
+Fish <- data.frame(Fish.normal, Fish.Bootstrap, Fish.Jackknife)
+rownames(Fish) <- c("mean", "SE(mean)" )
+Fish
+
+Copepod.normal <- c(CopepodDensity.mean, CopepodDensity.SE)
+Copepod.Bootstrap <- c(CopepodDensity.bootstrap.means.mean, CopepodDensity.bootstrap.means.SE)
+Copepod.Jackknife <- c(CopepodDensity.Jackknife.means.mean, CopepodDensity.Jackknife.means.SE)
+Copepod <- data.frame(Copepod.normal, Copepod.Bootstrap, Copepod.Jackknife)
+rownames(Copepod) <- c("mean", "SE(mean)" )
+Copepod
+```
+
