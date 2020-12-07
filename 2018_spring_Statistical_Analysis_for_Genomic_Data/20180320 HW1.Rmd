@@ -1,0 +1,210 @@
+---
+title: "Homework 1"
+author: "林妤真 b04b01036"
+output: html_document
+---
+#### --------------------------------------------------------------------------------------------------------------------------------------------------------
+
+#### • Self practice (Lange 2002 Exercise 2-2) Suppose in the Hardy-Weinberg model for and autosomal locus that the genotype frequencies for the two sexes differ:
+
+######Fi:Female
+######    A1A1:uf
+######    A1A2:vf
+######    A2A2:wf
+  
+######Fi:Male
+######    A1A1:um
+######    A1A2:vm
+######    A2A2:wm
+
+#### Define the probability
+```{r}
+uf <- 0.1
+vf <- 0.2
+wf <- 0.7
+
+um <- 0.5
+vm <- 0.3
+wm <- 0.2
+```
+    
+
+#### (a) Compute the frequencies of the genotypes in Fi+1
+```{r}
+A1A1 <- (uf + vf/2)*(um + vm/2)
+A1A2 <- (uf + vf/2)*(vm/2 + wm) + (um + vm/2)*(vf/2 + wf)
+A2A2 <- (vf/2 + wf)*(vm/2 + wm)
+
+# 此計算方式的基因頻率總和應為1，此計算方式才是正確的。
+A1A1+A1A2+A2A2 
+
+```
+
+#### (b-1) Use the “random-mating simulator” as in the previous practice and the χ2-test to confirm your result.
+
+#### Random-mating simulator
+```{r}
+p <- c(A1A1, A1A2, A2A2) #prob in x
+
+new.x <- c()
+
+for (i in 1:1000){
+x <- sample(c("A1A1", "A1A2", "A2A2"), prob=p, size=2, replace=TRUE) #只抽2人
+x1 <- sample(c(substr(x[1],1,2), substr(x[1],3,4)), size=1) #第一個親本
+x2 <- sample(c(substr(x[2],1,2), substr(x[2],3,4)), size=1) #第二個親本 設變數讓數字固定下來
+new.x[i] <- paste0(sort(c(x1, x2)), collapse="") # sort 的東西要在同個向量
+}
+
+new.x
+```
+
+
+#### (b-2) χ2-test
+```{r}
+result.table <- as.data.frame(table(new.x))
+result.table
+result.chi <- chisq.test(c(result.table[1,2],result.table[2,2],result.table[3,2]), # 模擬出的後代基因頻率
+                         p=c((A1A1+A1A2/2)^2, 2*(A1A1+A1A2/2)*(A2A2+A1A2/2), (A2A2+A1A2/2)^2)) # 理論上的後代基因頻率
+result.chi 
+result.chi$p.value # 結果發現 p-value 大於 0.05，代表我們模擬的結果與理論上的後代基因頻率沒有顯著差異，確認模擬結果正確。
+```
+
+#### (c) How long does it take genotype frequencies to stabilize at their Hardy-Weinberg values?
+當 p.value 大於 0.05 時，代表前一代與後一代間的基因頻率沒有顯著差異，即已達到哈溫平衡。
+```{r}
+# Define the probability
+# 第一代 F1
+uf <- 0.1
+vf <- 0.2
+wf <- 0.7
+
+um <- 0.5
+vm <- 0.3
+wm <- 0.2
+
+# Compute the frequencies of the genotypes in Fi+1
+# 第二代 F2
+A1A1 <- (uf + vf/2)*(um + vm/2)
+A1A2 <- (uf + vf/2)*(vm/2 + wm) + (um + vm/2)*(vf/2 + wf)
+A2A2 <- (vf/2 + wf)*(vm/2 + wm)
+
+# How long does it take genotype frequencies to stabilize at their Hardy-Weinberg values? 
+k = 10 # randomly set k generations to run the "random-mating simulator"
+for(j in 1:k){  
+  p <- c(A1A1, A1A2, A2A2) #prob in x
+  new.x <- c()
+  for (i in 1:1000){
+  x <- sample(c("A1A1", "A1A2", "A2A2"), prob=p, size=2, replace=TRUE) #只抽2人
+  x1 <- sample(c(substr(x[1],1,2), substr(x[1],3,4)), size=1) #第一個親本
+  x2 <- sample(c(substr(x[2],1,2), substr(x[2],3,4)), size=1) #第二個親本 設變數讓數字固定下來
+  new.x[i] <- paste0(sort(c(x1, x2)), collapse="") # sort 的東西要在同個向量
+  }
+  result.table <- as.data.frame(table(new.x))
+  # 比較這一代(A1A1, A1A2, A2A2) 與新算出的下一代(result.table) 是否有顯著差異
+  result.chi <- chisq.test(c(result.table[1,2],result.table[2,2],result.table[3,2]), p=c(A1A1, A1A2, A2A2)) 
+  
+  if (result.chi$p.value > 0.05){
+    # 因為第一代並不是在loop中算的，所以為 j+1 generations
+    print(paste("It takes",j+1,"generation(s) to stabilize at their Hardy-Weinberg values.")) 
+    break
+  }else{
+    A1A1 <- result.table[1,2] / 1000
+    A1A2 <- result.table[2,2] / 1000
+    A2A2 <- result.table[3,2] / 1000
+  }
+}
+
+```
+
+
+
+#### --------------------------------------------------------------------------------------------------------------------------------------------------------
+
+#### • Self practice (HWE for X-linker loci)
+
+######    Female  A1/A1 × Male A1
+######                 ↓
+######F1: Female  1/2 A1A1 + 1/2 A1A2 
+######    Male    1/2 A1 + 1/2 A2
+######                 ↓
+######F2: Female  3/8 A1A1 + 1/2 A1A2 + 1/8 A2A2
+######    Male    3/4 A1 + 1/4 A2
+
+Accordingly, the A1 allele frequencies for the female (qn) and the male (rn) in the nth generation can be derived from the allele frequencies for the female (qn−1) and the male (rn−1) in the n − 1th generation.
+
+qn = 1/2(rn−1+qn−1)
+rn = qn−1
+
+#### r0(=rn.1)=0.5 and q0(=qn.1)=0.5
+We start from r0(=rn.1)=0.5 and q0(=qn.1)=0.5 and simulate to observe the zigzag-pattern convergence.
+```{r}
+r <- c()
+q <- c()
+
+rn.1 <- 0.5
+qn.1 <- 0.5
+
+for ( i in 1:10){
+  qn = (1/2) * (rn.1+qn.1) # 以 rn.1 代表rn−1
+  rn = qn.1
+  
+  rn.1 <- rn
+  qn.1 <- qn
+  
+  r[i] <- rn.1
+  q[i] <- qn.1
+}
+
+r
+q
+
+
+```
+```{r}
+plot(c(1:length(r)), r, col = "black", ylim=c(0,1), xlab="generations", ylab="frequencies")
+lines(c(1:length(r)), r, type="b", lwd=1, lty=1, col="black")
+par(new = TRUE) #New plot
+plot(c(1:length(q)), q, col = "blue", ylim=c(0,1),xlab="", ylab="")
+lines(c(1:length(q)), q, type="b", lwd=1, lty=1, col="blue")
+legend("topright",c("Male(r)","Female(q)"), col=c("black","blue"), lty=1)
+```
+
+
+Whwn I start from r0(=rn.1)=0.5 and q0(=qn.1)=0.5, I can't observe the zigzag-pattern convergence. Thus I run it again with r0(=rn.1)=0.2 and q0(=qn.1)=0.8
+
+#### r0(=rn.1)=0.2 and q0(=qn.1)=0.8
+We start from r0(=rn.1)=0.2 and q0(=qn.1)=0.8 and simulate to observe the zigzag-pattern convergence.
+```{r}
+r <- c()
+q <- c()
+
+rn.1 <- 0.2
+qn.1 <- 0.8
+
+for ( i in 1:10){
+  qn = (1/2) * (rn.1+qn.1) # 以 rn.1 代表rn−1
+  rn = qn.1
+  
+  rn.1 <- rn
+  qn.1 <- qn
+  
+  r[i] <- rn.1
+  q[i] <- qn.1
+}
+
+r
+q
+
+
+```
+
+
+```{r}
+plot(c(1:length(r)), r, col = "black", ylim=c(0,1), xlab="generations", ylab="frequencies")
+lines(c(1:length(r)), r, type="b", lwd=1, lty=1, col="black")
+par(new = TRUE) #New plot
+plot(c(1:length(q)), q, col = "blue", ylim=c(0,1),xlab="", ylab="")
+lines(c(1:length(q)), q, type="b", lwd=1, lty=1, col="blue")
+legend("topright",c("Male(r)","Female(q)"), col=c("black","blue"), lty=1)
+```
+

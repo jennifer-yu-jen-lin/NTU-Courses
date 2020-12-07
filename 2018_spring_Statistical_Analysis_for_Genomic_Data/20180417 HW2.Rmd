@@ -1,0 +1,168 @@
+---
+title: "Homework 2"
+author: "Yu-Jen Lin"
+output:
+  html_document: default
+  pdf_document: default
+---
+#### b04b01036@ntu.edu.tw
+#### --------------------------------------------------------------------------------------------------------------------------------------------------------
+
+#### 1. Referring to the data in Table below, answer the following questions.
+(a) Use Student’s t-test to examine whether the difference in body weight between genotypes 1 and 0 for the marker is statistically significant.
+```{r}
+y = c(28, 32, 28, 29, 31, 20, 18, 21, 20, 21) # data input # space # enter
+x = matrix(c(rep(1,10),rep(1,5),rep(0,5)),10,2) # 10 rows , 2 columns
+trt = gl(2,5,10) # gl = Generate Factor Levels,  2 levels, 5 replications
+
+# t-test
+## test VARs are equal or not 
+var.result <- var.test(y~trt) 
+var.result
+print(paste("p-value =",var.result$p.value))
+print("No significant difference -> VARs are equal.")
+
+cat("Line \nLine 2")
+
+
+## equal variance t.test
+t.test.result <- t.test(y~trt, var.equal=TRUE)
+t.test.result
+print(paste("p-value =",t.test.result$p.value))
+print("The difference in body weight between genotypes 1 and 0 for the marker is statistically significant.")
+
+```
+
+(b) Perform the single marker analysis to estimate the genetic effect, a, for the marker. Provide the details (screen shot) or codes about your calculation.
+```{r}
+# linear algebra to estimate the genetic coefficient
+b = solve( t(x) %*% x) %*% (t(x) %*% y) # inverse = FUN solve (解二元一次方程式)
+b
+print(paste("Genetic effect (a) =",b[1,1]))
+sigma2 = t(y-x%*%b) %*% (y-x%*%b)/10
+sigma2
+```
+
+(c) Perform the F-test to examine whether the marker exerts a significant effect on body weight in the backcross population of mice.
+```{r}
+# F-test
+out = lm(y~trt) # linear model
+result = anova(out) # 列出變方分析表
+result
+print(paste("Pr(>F) =",result$`Pr(>F)`[1]))
+print("The marker exerts a significant effect.")
+```
+
+#### 2. Apply the QTL analysis on the “listeria” sample data set in r/qtl.
+
+(a) Apply the single marker analysis (Sax, 1923) to all markers and summarize the markers which have LOD score > 3.
+```{r}
+# install.packages("qtl") # don't need to re-download it i
+library(qtl)
+?listeria # check the details of the dataset
+data(listeria) # sample dataset: Susceptibility to Listeria monocytogenes infection in the mouse, 120 F2 females, 133 markers(2 on the X chromosome), phenotype = survival time (in hours) following infection
+
+# data summary
+plot(listeria)
+listeria$pheno #phenotype long table
+geno.table(listeria) #genotype long table
+
+plotPXG(listeria,"D10M44") # plot one marker as an example
+plotPXG(listeria,"D6M223") # plot one marker as an example
+plotRF(listeria) #estimate and plot the pairwise recombinant fraction, r
+
+# single marker analysis
+## "mr" stands for "marker regression" 
+## scanone = 一次只scan一個
+out.mr = scanone(listeria, method="mr") 
+
+# assume only one marker on each chromosome，且只在每個chr上選最顯著的marker
+summary(out.mr)  # all markers
+summary(out.mr, threshold=3) # markers which have LOD score > 3
+
+plot(out.mr, col=1)
+legend("topright",c("MR"), col=1, lty=1)
+
+# 人為選出大致上看起來最高及最平緩的區間畫圖
+plot(out.mr, chr=c(5,14)) 
+legend("topright",c("MR"), col=1, lty=1)
+plot(out.mr, chr=c(5,14), type="h")
+legend("topright",c("MR"), col=1, lty=1)
+```
+
+#### In (b) and (c), we need:
+```{r}
+# interval mapping: IM (Lander; EM) or RIM (Harley-Knott; H-K)
+# step: distance (in cM) between positions at which the genotype probabilities are calculated
+listeria = calc.genoprob(listeria, step=1)  # 1 centimorgan , chromosome interval unit, grid search
+```
+
+(b) Perform the interval mapping (Lander and Botstein, 1989), plot the results, and summarize the significant marker associated with the trait having permutation p-values < 0.05.
+```{r}
+# IM (Lander; EM)
+listeria = calc.genoprob(listeria, step=1)  # 1 centimorgan , chromosome interval unit, grid search
+out.em = scanone(listeria, method="em")
+head(out.em) # show step = 1 (start from the 1st marker) 
+out.em[1:30,] #我們設定的檢查區間為1 centimorgan，若檢查區間無marker，則每次檢查區間皆為1，若檢查區間出現marker則會出現區間不為1的情況，如0-1之間的D1M3、24-25之間的D1M75。
+plot(out.em, col=2)
+legend("topright",c("EM"), col=2, lty=1)
+plot(out.mr,out.em, chr=c(5,14),col=1:2)
+legend("topright",c("MR","EM"), col=1:2, lty=1)
+
+
+# permutation test for IM
+operm = scanone(listeria, method="em", n.perm=1000, verbose=FALSE) # verbose=FALSE: suppress output # n.perm = permutation 
+operm.f = data.frame(operm)
+summary.em = summary(out.em, perms=operm, alpha=0.05, pvalues=TRUE)
+summary.em 
+# 由於沒有任何 marker 在 permutation 的結果中 p-values < 0.05，所以我重新設定一次，將 alpha 設為 0.1，找出以下兩個 marker。
+summary.em.1 = summary(out.em, perms=operm, alpha=0.1, pvalues=TRUE)
+summary.em.1 
+
+# Plot those significant markers associated with the trait having permutation p-values < 0.1 (沒有任何 marker 在 permutation 的結果中 p-values < 0.05) 
+hist(operm.f$lod,ylim=c(0,700))
+text(x=6, y=500,"permutation" , pos=2)
+abline(v=summary.em.1$lod,col=c("green","darkgreen"))
+text(x= summary.em.1$lod[1]+4, y=650, rownames(summary.em.1)[1], pos=2,col="green")
+text(x= summary.em.1$lod[2]+1, y=650, rownames(summary.em.1)[2], pos=2,col="darkgreen")
+
+```
+
+(c) Perform the regression interval mapping (Harley and Knott, 1992), plot the results, and summarize the significant marker associated with the trait having permutation p-values < 0.05.
+```{r}
+# RIM (Harley-Knott; H-K)
+listeria = calc.genoprob(listeria, step=1)  # 1 centimorgan , chromosome interval unit, grid search
+out.hk = scanone(listeria, method="hk") # method預設值＝ＥＭ
+plot(out.hk, col=4)
+legend("topright",c("HK"), col=4, lty=1)
+plot(out.mr,out.em,out.hk, chr=c(5,14),col=c(1,2,4))
+legend("topright",c("MR","EM","HK"), col=c(1,2,4), lty=1)
+
+# permutation test for HK
+operhk = scanone(listeria, method="hk", n.perm=1000, verbose=FALSE) # verbose=FALSE: suppress output
+operhk.f = data.frame(operhk)
+summary.hk = summary(out.hk, perms=operhk, alpha=0.05, pvalues=TRUE) 
+summary.hk
+
+# Plot those significant markers associated with the trait having permutation p-values < 0.05 
+hist(operhk.f$lod,xlim=c(1,7))
+text(x=3, y=300,"permutation" , pos=2)
+abline(v=summary.hk$lod,col=c("green","darkgreen"))
+text(x= summary.hk$lod[1]+0.7, y=300, rownames(summary.hk)[1], pos=2, col="green")
+text(x= summary.hk$lod[2]+0.3, y=300, rownames(summary.hk)[2], pos=2, col="darkgreen")
+
+```
+
+
+(d) Compare the result of the above three methods for QTL mapping and draw an appropriate conclusion accordingly.
+
+三種分析方式得到的結果非常相似，僅有些微差異，說明了即使由不同角度切入分析，由於統計分析方法都是正確的，都可以讓我們得到同樣正確的結論。
+```{r}
+plot(out.mr,out.em,out.hk, col=c(1,2,4))
+legend("topright",c("MR","EM","HK"), col=c(1,2,4), lty=1)
+```
+
+
+
+
+
