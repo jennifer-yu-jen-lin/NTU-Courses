@@ -1,0 +1,14 @@
+###
+#1#
+###
+#
+# Need to import module
+import sys
+
+# run this from a terminal
+# e.g., python 3_command_line_CLASS.py red blue
+#
+# should see everything in the special variable sys.argv
+#
+# [0] element is program name
+print (sys.argv)

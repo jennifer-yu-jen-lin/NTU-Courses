@@ -1,0 +1,43 @@
+Lin, Yu-Jen
+NTU student ID: b04b01036
+email: b04b01036@ntu.edu.tw
+
+## 1 #############################################
+1(a)	 Output = b
+1(b)	 Output = ebb
+1(c)	 Output = aac
+1(d)	 Output = ['d', 'd', 'e', 'e', 'f', 'f']
+1(e)	 Output = []
+
+## 2 #############################################
+import re
+Input = ["555-8396 Neu, Allison",
+     "Burns, C. Montgomery",
+     "555-5299 Putz, Lionel",
+     "555-7334 Simpson, Homer Jay"]
+for i in Input:
+    search = re.search(r"([0-9-]*)\s*([A-Za-z]+),\s+(.*)", i)
+    print(search.group(3) + " " + search.group(2) + " " + search.group(1))
+
+## 3 #############################################
+(C) mycar = Car(4, 2)
+
+## 4 #############################################
+(E) def paint(self, c):
+		self.color = c
+
+## 5 #############################################
+(C) mycar.paint("red")
+
+## 6 #############################################
+(B) False
+
+## 7 #############################################
+(B)	Translate
+(C)	Back-Transcribe
+
+## 8 #############################################
+see Problem8_Lin,Yu-Jen.py
+
+## 9 #############################################
+see Problem9_Lin,Yu-Jen.py

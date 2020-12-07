@@ -1,0 +1,10 @@
+ValueError occurs. Input of set_max must be positive integer.
+ValueError occurs. Input of set_max must be positive integer.
+ValueError occurs. Grade input must be a number range from 0 to 100.
+ValueError occurs. Grade input must be a number range from 0 to 100.
+Name not found
+File not found
+Sally:90
+Jerry:70
+*Tom:50
+File not found

@@ -1,0 +1,11 @@
+Reload grade_file...
+Load database from file
+Sally:90
+Jerry:70
+*Tom:50
+Reload grade_file...
+Import database from CSV file
+Jane:100
+Sally:90
+Jerry:70
+*Tom:50
